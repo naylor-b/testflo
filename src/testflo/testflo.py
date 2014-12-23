@@ -20,6 +20,7 @@ method called get_iter(input_iter).
 
 import sys
 import os
+import time
 from types import FunctionType, MethodType
 import inspect
 import traceback
@@ -27,6 +28,8 @@ from cStringIO import StringIO
 from argparse import ArgumentParser
 from fnmatch import fnmatch
 import unittest
+
+import networkx as nx
 
 from fileutil import find_files, get_module_path, find_module
 
@@ -43,7 +46,6 @@ def _get_parser():
 
     return parser
 
-
 def _exclude_dir(dname):
     return dname in ('devenv', 'site-packages', 'dist-packages', 'contrib')
 
@@ -54,27 +56,12 @@ def read_config_file(cfgfile):
             if line:
                 yield line
 
-class TestResult(object):
-    """Contains the path to the test function/method, status
-    of the test (if finished), and error and stdout messages (if any).
-    """
-
-    def __init__(self, testpath, status='OK', out_msg='', err_msg=''):
-        self.testpath = testpath
-        self.status = status
-        self.out_msg = out_msg
-        self.err_msg = err_msg
-
-    def __str__(self):
-        stream = StringIO()
-        stream.write(self.testpath)
-        stream.write(' ... ')
-        stream.write(self.status)
-        if self.status != 'OK':
-            stream.write('\n')
-            stream.write(self.err_msg)
-        return stream.getvalue()
-
+def elapsed_str(elapsed):
+    hrs = int(elapsed/3600)
+    elapsed -= (hrs * 3600)
+    mins = int(elapsed/60)
+    elapsed -= (mins * 60)
+    return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
 def get_module(fname):
     """Given a filename or module path name, return a tuple
@@ -153,6 +140,35 @@ def parse_test_path(testpath):
     return (fname, mod, testcase, method)
 
 
+class TestResult(object):
+    """Contains the path to the test function/method, status
+    of the test (if finished), error and stdout messages (if any),
+    and start/end times.
+    """
+
+    def __init__(self, testpath, start_time, end_time,
+                 status='OK', out_msg='', err_msg=''):
+        self.testpath = testpath
+        self.status = status
+        self.out_msg = out_msg
+        self.err_msg = err_msg
+        self.start_time = start_time
+        self.end_time = end_time
+
+    def __str__(self):
+        stream = StringIO()
+        stream.write(self.testpath)
+        stream.write(' ... ')
+        stream.write(self.status)
+        if self.status != 'OK':
+            stream.write('\n')
+            stream.write(self.err_msg)
+        return stream.getvalue()
+
+    def elapsed(self):
+        return self.end_time - self.start_time
+
+
 class ResultProcessor(object):
     """Processes the TestResult objects after tests have
     been run.
@@ -174,6 +190,29 @@ class ResultProcessor(object):
         if result.err_msg:
             stream.write(result.err_msg)
             stream.write('\n')
+
+
+class TestPreview(object):
+    def get_iter(self, input_iter):
+        return self.show_preview(input_iter)
+
+    def show_preview(self, input_iter):
+        for test in input_iter:
+            sys.stdout.write("%s ... " % test)
+            sys.stdout.flush()
+            yield test
+
+
+class TestStatus(object):
+    def get_iter(self, input_iter):
+        return self.show_status(input_iter)
+
+    def show_status(self, input_iter):
+        for test in input_iter:
+            sys.stdout.write("%s (%s)\n" % 
+                               (test.status, elapsed_str(test.elapsed())))
+            sys.stdout.flush()
+            yield test
 
 
 class TestRunner(object):
@@ -211,9 +250,6 @@ class TestRunner(object):
         return status
 
     def run_test(self, test):
-        sys.stdout.write("%s ... " % test)
-        sys.stdout.flush()
-
         fname, mod, testcase, method = parse_test_path(test)
         if testcase:
             testcase = testcase(methodName=method.__name__)
@@ -223,6 +259,8 @@ class TestRunner(object):
 
         outstream = StringIO()
         errstream = StringIO()
+        
+        start_time = time.time()
 
         status = self._try_call(getattr(parent, 'setUp', None),
                                 outstream, errstream)
@@ -236,13 +274,12 @@ class TestRunner(object):
             if status == 'OK':
                 status = tdstatus
 
-            result = TestResult(test, status,
+            result = TestResult(test, start_time, time.time(), status,
                                 outstream.getvalue(), errstream.getvalue())
         else:
-            result = TestResult(test, status,
+            result = TestResult(test, start_time, time.time(), status,
                                 outstream.getvalue(), errstream.getvalue())
 
-        sys.stdout.write(status+'\n')
         return result
 
 
@@ -333,10 +370,113 @@ class TestDiscoverer(object):
                 yield result
 
 
+class TestPipeline(object):
+    """This class manages a graph of test iteration objects
+    that process tests and test results.
+    """
+    
+    def __init__(self):
+        self.graph = nx.DiGraph()
+
+    def add(self, name, obj):
+        """Add a new test iteration object to the graph."""
+        self.graph.add_node(name, iter=None, obj=obj)
+        
+    def connect(self, *args):
+        """Connect two or more test iteration objects together."""
+        for i, name in enumerate(args[1:]):
+            self.graph.add_edge(args[i], name)
+    
+    def _check_graph(self):
+        """Analyse the graph to make sure all connections are
+        legal, e.g., a node cannot have multiple input connections.
+        (later maybe this can be relaxed by automatically creating
+        aggregator nodes...)
+        """
+        srcs = False
+        sinks = False
+        
+        for n in self.graph:
+            indeg = self.graph.in_degree(n)
+            outdeg = self.graph.out_degree(n)
+            
+            if indeg and indeg > 1:
+                raise RuntimeError(
+                  "Node '%s' of iterator graph has multiple inputs" %
+                  n)
+                  
+            if outdeg and outdeg > 1:
+                raise RuntimeError(
+                  "Node '%s' of iterator graph has multiple outputs" %
+                  n)
+
+            if not indeg:
+                srcs = True
+
+            if not outdeg:
+                sinks = True
+                
+        if not srcs:
+            raise RuntimeError("iterator graph nas no sources")
+
+        if not sinks:
+            raise RuntimeError("iterator graph has no sinks")
+                
+    def run(self):
+        """Run a graph of test iteration objects."""
+    
+        self._check_graph()
+        
+        g = self.graph
+        srcs = []
+        sinks = []
+        for n, data in g.nodes_iter(data=True):
+            if not g.in_degree(n):
+                srcs.append(n)
+                if hasattr(data['obj'], 'get_iter'):
+                    data['iter'] = data['obj'].get_iter(None)
+                else:
+                    data['iter'] = iter(data['obj'])
+            
+            elif not g.out_degree(n):
+                sinks.append(n)
+        
+        visited = set(srcs)
+        for src in srcs:
+            for u,v in nx.bfs_edges(g, src):
+                if v not in visited:
+                    visited.add(v)
+                    iter_in = g.node[u]['iter']
+                    g.node[v]['iter'] = g.node[v]['obj'].get_iter(iter_in)
+
+        iterdict = {}
+        for sink in sinks:
+            iterdict[sink] = g.node[sink]['iter']
+
+        while iterdict:
+            for name, iterator in iterdict.items():
+                try:
+                    iterator.next()
+                except StopIteration:
+                    del iterdict[name]
+
+class MyTestPipeline(TestPipeline):
+    def __init__(self, tests):
+        super(MyTestPipeline, self).__init__()
+        
+        self.add('source', tests)
+        self.add('discovery', TestDiscoverer())
+        self.add('preview', TestPreview())
+        self.add('runner', TestRunner())
+        self.add('status', TestStatus())
+        
+        self.connect('source', 'discovery', 'preview', 'runner', 'status')
+
 def main():
     parser = _get_parser()
     options = parser.parse_args()
 
+    
     # pipeline
     #   source(s) of unexpanded test path names (could be dir/module/testcase/method)
     #      --> optional filter here
@@ -353,11 +493,14 @@ def main():
     if not tests:
         tests = [os.getcwd()]
 
-    i = 0
-    for result in TestRunner().get_iter(TestDiscoverer().get_iter(tests)):
-        i += 1
+    pipeline = MyTestPipeline(tests)
+    pipeline.run()
+    
+    # i = 0
+    # for result in TestRunner().get_iter(TestDiscoverer().get_iter(tests)):
+    #     i += 1
 
-    print "\nProcessed %d tests" % i
+    #print "\nProcessed %d tests" % i
 
 def run_tests():
     main()
