@@ -1,3 +1,22 @@
+"""
+testflo is a python testing framework that takes an iterator of test
+specifier names e.g., <test_module>:<testcase>.<test_method>), and feeds 
+them through a pipeline of objects that operate on them and transform them 
+into TestResult objects, then pass them on to other objects in the pipeline.
+The goal is to make it very easy to modify and extend because of the simplicity
+of the API and the simplicity of the objects being passed through the
+pipeline.
+
+The objects passed through the pipline are either simple strings that
+indicate which test to run, or TestReult objects, which are also simple
+and contain only the test specifier string, a status indicating whether 
+the test passed or failed, and captured stdout and stderr from the running
+of the test.
+
+The API necessary for objects that participate in the pipeline is a single
+method called get_iter(input_iter).
+
+"""
 
 import sys
 import os
@@ -139,15 +158,14 @@ class ResultProcessor(object):
     been run.
     """
 
-    def __init__(self, test_results, stream=sys.stdout):
-        self.results = test_results
+    def __init__(self, stream=sys.stdout):
         self.stream = stream
 
-    def __iter__(self):
-        return self.process_results()
+    def get_iter(self, input_iter):
+        return self.process_results(input_iter)
 
-    def process_results(self):
-        for result in self.results:
+    def process_results(self, input_iter):
+        for result in input_iter:
             self.process(result)
             yield result
 
@@ -161,14 +179,11 @@ class ResultProcessor(object):
 class TestRunner(object):
     """Runs each test specified in results."""
 
-    def __init__(self, tests):
-        self.tests = tests
+    def get_iter(self, input_iter):
+        return self.process_tests(input_iter)
 
-    def __iter__(self):
-        return self.process_tests()
-
-    def process_tests(self):
-        for test in self.tests:
+    def process_tests(self, input_iter):
+        for test in input_iter:
             yield self.run_test(test)
 
     def _try_call(self, method, outstream, errstream):
@@ -237,23 +252,21 @@ class TestDiscoverer(object):
     directories/modules/testcases.
     """
 
-    def __init__(self, tests,
-                 module_pattern='test*.py',
-                 func_pattern='test*'):
-        self.tests = tests
+    def __init__(self, module_pattern='test*.py',
+                       func_pattern='test*'):
         self.module_pattern = module_pattern
         self.func_pattern = func_pattern
 
-    def __iter__(self):
-        return self.process_test_strings()
+    def get_iter(self, input_iter):
+        return self.process_test_strings(input_iter)
 
-    def process_test_strings(self):
+    def process_test_strings(self, input_iter):
         """Returns an iterator over the expanded testpath
         strings based on the starting list of
         directories/modules/testcases/testmethods.
         """
 
-        for test in self.tests:
+        for test in input_iter:
             if os.path.isdir(test):
                 for result in self.process_dir(test):
                     yield result
@@ -325,6 +338,11 @@ def main():
     options = parser.parse_args()
 
     # pipeline
+    #   source(s) of unexpanded test path names (could be dir/module/testcase/method)
+    #      --> optional filter here
+    #      -->  test discoverer(s)
+    #             -->  iterator of expanded test path names (full module:testcase.method names)
+    #      --> optional filter here
     #   name(s) of dirs/modules/testcases/tests --> test_discoverer
     #   TestDiscoverer (TestResult) --> TestFilter
     #   TestFilter (TestResult) --> TestRunner
@@ -339,7 +357,7 @@ def main():
         tests = [os.getcwd()]
 
     i = 0
-    for result in TestRunner(TestDiscoverer(tests)):
+    for result in TestRunner().get_iter(TestDiscoverer().get_iter(tests)):
         #print result
         i += 1
 
