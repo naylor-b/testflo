@@ -247,10 +247,6 @@ class TestRunner(object):
 
 
 class TestDiscoverer(object):
-    """An iterator that returns a testpath string
-    for each test found in the specified
-    directories/modules/testcases.
-    """
 
     def __init__(self, module_pattern='test*.py',
                        func_pattern='test*'):
@@ -265,14 +261,18 @@ class TestDiscoverer(object):
         strings based on the starting list of
         directories/modules/testcases/testmethods.
         """
-
+        seen = set()
         for test in input_iter:
             if os.path.isdir(test):
                 for result in self.process_dir(test):
-                    yield result
+                    if result not in seen:
+                        seen.add(result)
+                        yield result
             else:
                 for result in self.process_test_path(test):
-                    yield result
+                    if result not in seen:
+                        seen.add(result)
+                        yield result
 
     def process_dir(self, dname):
         for f in find_files(dname, match=self.module_pattern,
@@ -340,14 +340,11 @@ def main():
     # pipeline
     #   source(s) of unexpanded test path names (could be dir/module/testcase/method)
     #      --> optional filter here
-    #      -->  test discoverer(s)
-    #             -->  iterator of expanded test path names (full module:testcase.method names)
+    #      --> test discoverer(s)
+    #      --> iterator of expanded test path names (full module:testcase.method names)
     #      --> optional filter here
-    #   name(s) of dirs/modules/testcases/tests --> test_discoverer
-    #   TestDiscoverer (TestResult) --> TestFilter
-    #   TestFilter (TestResult) --> TestRunner
-    #   TestRunner may branch to test workers
-    #   TestRunner (TestResult) --> ResultProcessor
+    #      --> test runner  (may branch to test workers)
+    #      --> result processor(s)
 
     tests = options.tests
     if options.cfg:
@@ -358,7 +355,6 @@ def main():
 
     i = 0
     for result in TestRunner().get_iter(TestDiscoverer().get_iter(tests)):
-        #print result
         i += 1
 
     print "\nProcessed %d tests" % i
