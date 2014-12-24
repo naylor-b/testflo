@@ -1,7 +1,7 @@
 """
 testflo is a python testing framework that takes an iterator of test
-specifier names e.g., <test_module>:<testcase>.<test_method>), and feeds 
-them through a pipeline of objects that operate on them and transform them 
+specifier names e.g., <test_module>:<testcase>.<test_method>), and feeds
+them through a pipeline of objects that operate on them and transform them
 into TestResult objects, then pass them on to other objects in the pipeline.
 The goal is to make it very easy to modify and extend because of the simplicity
 of the API and the simplicity of the objects being passed through the
@@ -9,7 +9,7 @@ pipeline.
 
 The objects passed through the pipline are either simple strings that
 indicate which test to run, or TestReult objects, which are also simple
-and contain only the test specifier string, a status indicating whether 
+and contain only the test specifier string, a status indicating whether
 the test passed or failed, and captured stdout and stderr from the running
 of the test.
 
@@ -61,7 +61,12 @@ def elapsed_str(elapsed):
     elapsed -= (hrs * 3600)
     mins = int(elapsed/60)
     elapsed -= (mins * 60)
-    return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
+    if hrs:
+        return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
+    elif mins:
+        return "%02d:%.2f" % (mins, elapsed)
+    else:
+        return "%.2f" % elapsed
 
 def get_module(fname):
     """Given a filename or module path name, return a tuple
@@ -101,7 +106,7 @@ def get_testcase(filename, mod, tcasename):
     if issubclass(tcase, unittest.TestCase):
         return tcase
     else:
-        raise TypeError("'%s' in file '%s' is not a TestCase." % 
+        raise TypeError("'%s' in file '%s' is not a TestCase." %
                         (tcasename, filename))
 
 def parse_test_path(testpath):
@@ -209,10 +214,41 @@ class TestStatus(object):
 
     def show_status(self, input_iter):
         for test in input_iter:
-            sys.stdout.write("%s (%s)\n" % 
+            sys.stdout.write("%s (%s)\n" %
                                (test.status, elapsed_str(test.elapsed())))
             sys.stdout.flush()
             yield test
+
+class TestCountSummary(object):
+    def get_iter(self, input_iter):
+        return self.count_tests(input_iter)
+
+    def count_tests(self, input_iter):
+        oks = 0
+        fails = 0
+        skips = 0
+        total = 0
+
+        for test in input_iter:
+            total += 1
+            if test.status == 'OK':
+                oks += 1
+            elif test.status == 'FAIL':
+                fails += 1
+            elif test.status == 'SKIP':
+                skips += 1
+            yield test
+
+        sys.stdout.write("\n\nRan %d test%s\n\n" %
+                         (total, "s" if total > 1 else ""))
+
+        if fails == 0:
+            sys.stdout.write("OK")
+        else:
+            sys.stdout.write('FAILED ( failures=%d )\n' % fails)
+
+        if skips:
+            sys.stdout.write("Skipped: %d\n" % skips)
 
 
 class TestRunner(object):
@@ -259,7 +295,7 @@ class TestRunner(object):
 
         outstream = StringIO()
         errstream = StringIO()
-        
+
         start_time = time.time()
 
         status = self._try_call(getattr(parent, 'setUp', None),
@@ -374,19 +410,19 @@ class TestPipeline(object):
     """This class manages a graph of test iteration objects
     that process tests and test results.
     """
-    
+
     def __init__(self):
         self.graph = nx.DiGraph()
 
     def add(self, name, obj):
         """Add a new test iteration object to the graph."""
         self.graph.add_node(name, iter=None, obj=obj)
-        
+
     def connect(self, *args):
         """Connect two or more test iteration objects together."""
         for i, name in enumerate(args[1:]):
             self.graph.add_edge(args[i], name)
-    
+
     def _check_graph(self):
         """Analyse the graph to make sure all connections are
         legal, e.g., a node cannot have multiple input connections.
@@ -395,16 +431,16 @@ class TestPipeline(object):
         """
         srcs = False
         sinks = False
-        
+
         for n in self.graph:
             indeg = self.graph.in_degree(n)
             outdeg = self.graph.out_degree(n)
-            
+
             if indeg and indeg > 1:
                 raise RuntimeError(
                   "Node '%s' of iterator graph has multiple inputs" %
                   n)
-                  
+
             if outdeg and outdeg > 1:
                 raise RuntimeError(
                   "Node '%s' of iterator graph has multiple outputs" %
@@ -415,18 +451,18 @@ class TestPipeline(object):
 
             if not outdeg:
                 sinks = True
-                
+
         if not srcs:
             raise RuntimeError("iterator graph nas no sources")
 
         if not sinks:
             raise RuntimeError("iterator graph has no sinks")
-                
+
     def run(self):
         """Run a graph of test iteration objects."""
-    
+
         self._check_graph()
-        
+
         g = self.graph
         srcs = []
         sinks = []
@@ -437,10 +473,10 @@ class TestPipeline(object):
                     data['iter'] = data['obj'].get_iter(None)
                 else:
                     data['iter'] = iter(data['obj'])
-            
+
             elif not g.out_degree(n):
                 sinks.append(n)
-        
+
         visited = set(srcs)
         for src in srcs:
             for u,v in nx.bfs_edges(g, src):
@@ -463,20 +499,22 @@ class TestPipeline(object):
 class MyTestPipeline(TestPipeline):
     def __init__(self, tests):
         super(MyTestPipeline, self).__init__()
-        
+
         self.add('source', tests)
         self.add('discovery', TestDiscoverer())
         self.add('preview', TestPreview())
         self.add('runner', TestRunner())
         self.add('status', TestStatus())
-        
-        self.connect('source', 'discovery', 'preview', 'runner', 'status')
+        self.add('summary', TestCountSummary())
+
+        self.connect('source', 'discovery', 'preview',
+                     'runner', 'status', 'summary')
 
 def main():
     parser = _get_parser()
     options = parser.parse_args()
 
-    
+
     # pipeline
     #   source(s) of unexpanded test path names (could be dir/module/testcase/method)
     #      --> optional filter here
@@ -489,18 +527,12 @@ def main():
     tests = options.tests
     if options.cfg:
         tests.extend(read_config_file(options.cfg))
-        
+
     if not tests:
         tests = [os.getcwd()]
 
     pipeline = MyTestPipeline(tests)
     pipeline.run()
-    
-    # i = 0
-    # for result in TestRunner().get_iter(TestDiscoverer().get_iter(tests)):
-    #     i += 1
-
-    #print "\nProcessed %d tests" % i
 
 def run_tests():
     main()
