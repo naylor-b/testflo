@@ -219,36 +219,46 @@ class TestStatus(object):
             sys.stdout.flush()
             yield test
 
-class TestCountSummary(object):
+class TestSummary(object):
     def get_iter(self, input_iter):
-        return self.count_tests(input_iter)
+        return self.summarize(input_iter)
 
-    def count_tests(self, input_iter):
+    def summarize(self, input_iter):
         oks = 0
-        fails = 0
-        skips = 0
         total = 0
+        total_time = 0.
+        fails = []
+        skips = []
 
         for test in input_iter:
             total += 1
+            total_time += test.elapsed()
+
             if test.status == 'OK':
                 oks += 1
             elif test.status == 'FAIL':
-                fails += 1
+                fails.append(test.testpath)
             elif test.status == 'SKIP':
-                skips += 1
+                skips.append(test.testpath)
             yield test
 
-        sys.stdout.write("\n\nRan %d test%s\n\n" %
-                         (total, "s" if total > 1 else ""))
-
-        if fails == 0:
-            sys.stdout.write("OK")
-        else:
-            sys.stdout.write('FAILED ( failures=%d )\n' % fails)
-
         if skips:
-            sys.stdout.write("Skipped: %d\n" % skips)
+            print "\n\nThe following tests were skipped:\n"
+            for s in sorted(skips):
+                print s
+
+        if fails:
+            print "\n\nThe following tests failed:\n"
+            for f in sorted(fails):
+                print f
+        else:
+            print "OK"
+
+        print "\nFails: %d\nSkips: %d\n" % (len(fails), len(skips))
+
+        s = "s" if total > 1 else ""
+        print "\n\nRan %d test%s  (Elapsed time: %s)\n\n" % \
+                         (total, s, elapsed_str(total_time))
 
 
 class TestRunner(object):
@@ -505,7 +515,7 @@ class MyTestPipeline(TestPipeline):
         self.add('preview', TestPreview())
         self.add('runner', TestRunner())
         self.add('status', TestStatus())
-        self.add('summary', TestCountSummary())
+        self.add('summary', TestSummary())
 
         self.connect('source', 'discovery', 'preview',
                      'runner', 'status', 'summary')
