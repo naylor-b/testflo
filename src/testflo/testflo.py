@@ -216,6 +216,8 @@ class TestStatus(object):
         for test in input_iter:
             sys.stdout.write("%s (%s)\n" %
                                (test.status, elapsed_str(test.elapsed())))
+            if test.status != 'OK':
+                sys.stdout.write(test.err_msg)
             sys.stdout.flush()
             yield test
 
