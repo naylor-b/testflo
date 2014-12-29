@@ -28,10 +28,12 @@ from cStringIO import StringIO
 from argparse import ArgumentParser
 from fnmatch import fnmatch
 import unittest
-
+from multiprocessing import Process, Queue, current_process, freeze_support
 import networkx as nx
 
 from fileutil import find_files, get_module_path, find_module
+
+_start_time = 0.0
 
 def _get_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
@@ -191,7 +193,8 @@ class ResultProcessor(object):
             yield result
 
     def process(self, result):
-        stream.write("%s ... %s\n" % (result.path, result.status))
+        stream = self.stream
+        stream.write("%s ... %s\n" % (result.testpath, result.status))
         if result.err_msg:
             stream.write(result.err_msg)
             stream.write('\n')
@@ -221,11 +224,14 @@ class TestStatus(object):
             sys.stdout.flush()
             yield test
 
+
 class TestSummary(object):
     def get_iter(self, input_iter):
         return self.summarize(input_iter)
 
     def summarize(self, input_iter):
+        global _start_time
+
         oks = 0
         total = 0
         total_time = 0.
@@ -258,9 +264,12 @@ class TestSummary(object):
 
         print "\nFails: %d\nSkips: %d\n" % (len(fails), len(skips))
 
+        wallclock = time.time() - _start_time
+
         s = "s" if total > 1 else ""
-        print "\n\nRan %d test%s  (Elapsed time: %s)\n\n" % \
-                         (total, s, elapsed_str(total_time))
+        print "\n\nRan %d test%s  (elapsed time: %s, speedup: %.2f)\n\n" % \
+                         (total, s, elapsed_str(wallclock),
+                          total_time/wallclock)
 
 
 class TestRunner(object):
@@ -329,6 +338,59 @@ class TestRunner(object):
                                 outstream.getvalue(), errstream.getvalue())
 
         return result
+
+_test_runner = TestRunner()
+
+def _worker(task_queue, done_queue):
+    global _test_runner
+    for testpath in iter(task_queue.get, 'STOP'):
+        done_queue.put(_test_runner.run_test(testpath))
+
+
+class MPTestRunner(TestRunner):
+    """TestRunner that uses a worker poll to execute tests
+    concurrently.
+    """
+    def __init__(self, num_procs=4):
+        # Create queues
+        self.task_queue = Queue()
+        self.done_queue = Queue()
+
+        self.procs = []
+        # Start worker processes
+        for i in range(num_procs):
+            self.procs.append(Process(target=_worker,
+                    args=(self.task_queue,self.done_queue)))
+        for proc in self.procs:
+            proc.start()
+
+    def get_iter(self, input_iter):
+        return self.process_mp_tests(input_iter)
+
+    def process_mp_tests(self, input_iter):
+        it = iter(input_iter)
+        numtests = 0
+        try:
+            for proc in self.procs:
+                testpath = it.next()
+                self.task_queue.put(testpath)
+                numtests += 1
+        except StopIteration:
+            for i in range(numtests):
+                yield self.task_queue.get()
+            return
+
+        try:
+            while True:
+                yield self.done_queue.get()
+                testpath = it.next()
+                self.task_queue.put(testpath)
+        except StopIteration:
+            for i in range(numtests-1):
+                yield self.done_queue.get()
+
+        for proc in self.procs:
+            proc.terminate()
 
 
 class TestDiscoverer(object):
@@ -515,14 +577,17 @@ class MyTestPipeline(TestPipeline):
         self.add('source', tests)
         self.add('discovery', TestDiscoverer())
         self.add('preview', TestPreview())
-        self.add('runner', TestRunner())
+        self.add('runner', MPTestRunner())
+        self.add('saver', ResultProcessor(open('test_report.out', 'w')))
         self.add('status', TestStatus())
         self.add('summary', TestSummary())
 
         self.connect('source', 'discovery', 'preview',
-                     'runner', 'status', 'summary')
+                     'runner', 'saver', 'status', 'summary')
 
 def main():
+    global _start_time
+
     parser = _get_parser()
     options = parser.parse_args()
 
@@ -544,6 +609,8 @@ def main():
         tests = [os.getcwd()]
 
     pipeline = MyTestPipeline(tests)
+
+    _start_time = time.time()
     pipeline.run()
 
 def run_tests():
