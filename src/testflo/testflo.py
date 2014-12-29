@@ -201,14 +201,15 @@ class ResultProcessor(object):
         elif result.status == 'SKIP':
             stream.write('S')
 
-        if result.err_msg:
+        if result.err_msg and result.status == 'FAIL':
             if not self.verbose:
                 stream.write("\n%s ... %s (%s)\n" % (result.testpath, 
                                                      result.status,
                                                      elapsed_str(result.elapsed())))
             stream.write(result.err_msg)
             stream.write('\n')
-            stream.flush()
+
+        stream.flush()
 
 
 class TestSummary(object):
@@ -226,6 +227,8 @@ class TestSummary(object):
         total_time = 0.
         fails = []
         skips = []
+        
+        write = self.stream.write
 
         for test in input_iter:
             total += 1
@@ -240,25 +243,26 @@ class TestSummary(object):
             yield test
 
         if skips:
-            self.stream.write("\n\nThe following tests were skipped:\n")
+            write("\n\nThe following tests were skipped:\n")
             for s in sorted(skips):
-                self.stream.write(s)
-                self.stream.write('\n')
+                write(s)
+                write('\n')
 
         if fails:
-            self.stream.write("\n\nThe following tests failed:\n")
+            write("\n\nThe following tests failed:\n")
             for f in sorted(fails):
-                self.stream.write(f)
-                self.stream.write('\n')
+                write(f)
+                write('\n')
         else:
-            self.stream.write("OK")
+            write("\n\nOK")
 
-        self.stream.write("\nFails: %d\nSkips: %d\n" % (len(fails), len(skips)))
+        write("\n\nPassed:  %d\nFailed:  %d\nSkipped: %d\n" % 
+                            (oks, len(fails), len(skips)))
 
         wallclock = time.time() - _start_time
 
         s = "s" if total > 1 else ""
-        self.stream.write("\n\nRan %d test%s  (elapsed time: %s)\n\n" %
+        write("\n\nRan %d test%s  (elapsed time: %s)\n\n" %
                           (total, s, elapsed_str(wallclock)))
 
 
