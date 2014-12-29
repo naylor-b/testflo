@@ -36,24 +36,12 @@ from fileutil import find_files, get_module_path, find_module
 
 _start_time = 0.0
 
-def _get_parser():
-    """Sets up the plugin arg parser and all of its subcommand parsers."""
-
-    parser = ArgumentParser()
-    parser.usage = "testease [options]"
-    parser.add_argument('-c', '--config', action='store', dest='cfg',
-                        metavar='CONFIG',
-                        help='Path of config file where tests are specified.')
-    parser.add_argument('tests', metavar='test', nargs='*',
-                       help='a test method/case/module/directory to run')
-
-    return parser
-
 _exclude_dirs = set(['devenv', 
                      'site-packages',
                      'dist-packages',
                      'build',
                      'contrib'])
+                     
 def _exclude_dir(dname):
     global _exclude_dirs
     return dname in _exclude_dirs
@@ -188,8 +176,9 @@ class ResultProcessor(object):
     been run.
     """
 
-    def __init__(self, stream=sys.stdout):
+    def __init__(self, stream=sys.stdout, verbose=False):
         self.stream = stream
+        self.verbose = verbose
 
     def get_iter(self, input_iter):
         return self.process_results(input_iter)
@@ -201,38 +190,25 @@ class ResultProcessor(object):
 
     def process(self, result):
         stream = self.stream
-        stream.write("%s ... %s (%s)\n" % (result.testpath, 
-                                           result.status,
-                                           elapsed_str(result.elapsed())))
+        if self.verbose:
+            stream.write("%s ... %s (%s)\n" % (result.testpath, 
+                                               result.status,
+                                               elapsed_str(result.elapsed())))
+        elif result.status == 'OK':
+            stream.write('.')
+        elif result.status == 'FAIL':
+            stream.write('F')
+        elif result.status == 'SKIP':
+            stream.write('S')
+
         if result.err_msg:
+            if not self.verbose:
+                stream.write("\n%s ... %s (%s)\n" % (result.testpath, 
+                                                     result.status,
+                                                     elapsed_str(result.elapsed())))
             stream.write(result.err_msg)
             stream.write('\n')
             stream.flush()
-
-
-class TestPreview(object):
-    def get_iter(self, input_iter):
-        return self.show_preview(input_iter)
-
-    def show_preview(self, input_iter):
-        for test in input_iter:
-            sys.stdout.write("%s ... " % test)
-            sys.stdout.flush()
-            yield test
-
-
-class TestStatus(object):
-    def get_iter(self, input_iter):
-        return self.show_status(input_iter)
-
-    def show_status(self, input_iter):
-        for test in input_iter:
-            sys.stdout.write("%s (%s)\n" %
-                               (test.status, elapsed_str(test.elapsed())))
-            if test.status != 'OK':
-                sys.stdout.write(test.err_msg)
-            sys.stdout.flush()
-            yield test
 
 
 class TestSummary(object):
@@ -555,6 +531,7 @@ class TestPipeline(object):
     def run(self):
         """Run a graph of test iteration objects."""
 
+        # for now, just assume a simple pipeline (no branching)
         self.connect(*self.pipeline)
         
         self._check_graph()
@@ -592,24 +569,26 @@ class TestPipeline(object):
                 except StopIteration:
                     del iterdict[name]
 
+def _get_parser():
+    """Sets up the plugin arg parser and all of its subcommand parsers."""
 
-class MyTestPipeline(TestPipeline):
-    def __init__(self, tests):
-        super(MyTestPipeline, self).__init__()
+    parser = ArgumentParser()
+    parser.usage = "testease [options]"
+    parser.add_argument('-c', '--config', action='store', dest='cfg',
+                        metavar='CONFIG',
+                        help='Path of config file where tests are specified.')
+    parser.add_argument('-n', '--numprocs', action='store', dest='numprocs',
+                        metavar='NUM_PROCS', default=1,
+                        help='Number of processes to run')
+    parser.add_argument('-o', '--outfile', action='store', dest='outfile',
+                        metavar='OUTFILE', default='test_report.out',
+                        help='Name of test report file')
+    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
+                        help='if true, include testpath and elapsed time in screen output')
+    parser.add_argument('tests', metavar='test', nargs='*',
+                       help='a test method/case/module/directory to run')
 
-        report = open('test_report.out', 'w')
-        
-        # add pipeline members in order
-        
-        self.add('source', tests)
-        self.add('discovery', TestDiscoverer())
-        #self.add('preview', TestPreview())
-        self.add('runner', MPTestRunner())
-        self.add('saver_console', ResultProcessor())
-        self.add('saver', ResultProcessor(report))
-        #self.add('status', TestStatus())
-        self.add('summary_console', TestSummary())
-        self.add('summary', TestSummary(report))
+    return parser
 
 def main():
     global _start_time
@@ -624,13 +603,26 @@ def main():
     if not tests:
         tests = [os.getcwd()]
 
-    pipeline = MyTestPipeline(tests)
+    with open(options.outfile, 'w') as report:
+        pipeline = TestPipeline()
+        
+        pipeline.add('source', tests)
+        pipeline.add('discovery', TestDiscoverer())
+        
+        if options.numprocs > 1:
+            pipeline.add('runner', MPTestRunner())
+        else:
+            pipeline.add('runner', TestRunner())
+            
+        pipeline.add('saver_console', ResultProcessor(verbose=options.verbose))
+        pipeline.add('saver', ResultProcessor(report))
+        
+        pipeline.add('summary_console', TestSummary())
+        pipeline.add('summary', TestSummary(report))
+        
+        _start_time = time.time()
+        pipeline.run()
 
-    _start_time = time.time()
-    pipeline.run()
-
-def run_tests():
-    main()
 
 if __name__ == '__main__':
     main()
