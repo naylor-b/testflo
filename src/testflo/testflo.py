@@ -28,7 +28,8 @@ from cStringIO import StringIO
 from argparse import ArgumentParser
 from fnmatch import fnmatch
 import unittest
-from multiprocessing import Process, Queue, current_process, freeze_support
+from multiprocessing import Process, Queue, current_process, \
+                            freeze_support, cpu_count
 import networkx as nx
 
 from fileutil import find_files, get_module_path, find_module
@@ -48,8 +49,14 @@ def _get_parser():
 
     return parser
 
+_exclude_dirs = set(['devenv', 
+                     'site-packages',
+                     'dist-packages',
+                     'build',
+                     'contrib'])
 def _exclude_dir(dname):
-    return dname in ('devenv', 'site-packages', 'dist-packages', 'contrib')
+    global _exclude_dirs
+    return dname in _exclude_dirs
 
 def read_config_file(cfgfile):
     with open(os.path.abspath(cfgfile), 'r') as f:
@@ -194,10 +201,13 @@ class ResultProcessor(object):
 
     def process(self, result):
         stream = self.stream
-        stream.write("%s ... %s\n" % (result.testpath, result.status))
+        stream.write("%s ... %s (%s)\n" % (result.testpath, 
+                                           result.status,
+                                           elapsed_str(result.elapsed())))
         if result.err_msg:
             stream.write(result.err_msg)
             stream.write('\n')
+            stream.flush()
 
 
 class TestPreview(object):
@@ -226,6 +236,9 @@ class TestStatus(object):
 
 
 class TestSummary(object):
+    def __init__(self, stream=sys.stdout):
+        self.stream = stream
+
     def get_iter(self, input_iter):
         return self.summarize(input_iter)
 
@@ -251,25 +264,26 @@ class TestSummary(object):
             yield test
 
         if skips:
-            print "\n\nThe following tests were skipped:\n"
+            self.stream.write("\n\nThe following tests were skipped:\n")
             for s in sorted(skips):
-                print s
+                self.stream.write(s)
+                self.stream.write('\n')
 
         if fails:
-            print "\n\nThe following tests failed:\n"
+            self.stream.write("\n\nThe following tests failed:\n")
             for f in sorted(fails):
-                print f
+                self.stream.write(f)
+                self.stream.write('\n')
         else:
-            print "OK"
+            self.stream.write("OK")
 
-        print "\nFails: %d\nSkips: %d\n" % (len(fails), len(skips))
+        self.stream.write("\nFails: %d\nSkips: %d\n" % (len(fails), len(skips)))
 
         wallclock = time.time() - _start_time
 
         s = "s" if total > 1 else ""
-        print "\n\nRan %d test%s  (elapsed time: %s, speedup: %.2f)\n\n" % \
-                         (total, s, elapsed_str(wallclock),
-                          total_time/wallclock)
+        self.stream.write("\n\nRan %d test%s  (elapsed time: %s)\n\n" %
+                          (total, s, elapsed_str(wallclock)))
 
 
 class TestRunner(object):
@@ -346,12 +360,12 @@ def _worker(task_queue, done_queue):
     for testpath in iter(task_queue.get, 'STOP'):
         done_queue.put(_test_runner.run_test(testpath))
 
-
 class MPTestRunner(TestRunner):
-    """TestRunner that uses a worker poll to execute tests
-    concurrently.
+    """TestRunner that uses the multiprocessing package
+    to execute tests concurrently.
     """
-    def __init__(self, num_procs=4):
+    
+    def __init__(self, num_procs=cpu_count()):
         # Create queues
         self.task_queue = Queue()
         self.done_queue = Queue()
@@ -360,7 +374,7 @@ class MPTestRunner(TestRunner):
         # Start worker processes
         for i in range(num_procs):
             self.procs.append(Process(target=_worker,
-                    args=(self.task_queue,self.done_queue)))
+                    args=(self.task_queue, self.done_queue)))
         for proc in self.procs:
             proc.start()
 
@@ -372,25 +386,29 @@ class MPTestRunner(TestRunner):
         numtests = 0
         try:
             for proc in self.procs:
-                testpath = it.next()
-                self.task_queue.put(testpath)
+                self.task_queue.put(it.next())
                 numtests += 1
         except StopIteration:
-            for i in range(numtests):
-                yield self.task_queue.get()
-            return
-
-        try:
-            while True:
-                yield self.done_queue.get()
-                testpath = it.next()
-                self.task_queue.put(testpath)
-        except StopIteration:
-            for i in range(numtests-1):
-                yield self.done_queue.get()
+            pass
+        else:
+            initial = numtests
+            try:
+                while numtests:
+                    yield self.done_queue.get()
+                    numtests -= 1
+                    self.task_queue.put(it.next())
+                    numtests += 1
+            except StopIteration:
+                pass
 
         for proc in self.procs:
-            proc.terminate()
+            self.task_queue.put('STOP')
+
+        for i in range(numtests):
+            yield self.done_queue.get()
+
+        for proc in self.procs:
+            proc.join()
 
 
 class TestDiscoverer(object):
@@ -487,10 +505,12 @@ class TestPipeline(object):
 
     def __init__(self):
         self.graph = nx.DiGraph()
+        self.pipeline = []
 
     def add(self, name, obj):
         """Add a new test iteration object to the graph."""
         self.graph.add_node(name, iter=None, obj=obj)
+        self.pipeline.append(name)
 
     def connect(self, *args):
         """Connect two or more test iteration objects together."""
@@ -535,6 +555,8 @@ class TestPipeline(object):
     def run(self):
         """Run a graph of test iteration objects."""
 
+        self.connect(*self.pipeline)
+        
         self._check_graph()
 
         g = self.graph
@@ -570,36 +592,30 @@ class TestPipeline(object):
                 except StopIteration:
                     del iterdict[name]
 
+
 class MyTestPipeline(TestPipeline):
     def __init__(self, tests):
         super(MyTestPipeline, self).__init__()
 
+        report = open('test_report.out', 'w')
+        
+        # add pipeline members in order
+        
         self.add('source', tests)
         self.add('discovery', TestDiscoverer())
-        self.add('preview', TestPreview())
+        #self.add('preview', TestPreview())
         self.add('runner', MPTestRunner())
-        self.add('saver', ResultProcessor(open('test_report.out', 'w')))
-        self.add('status', TestStatus())
-        self.add('summary', TestSummary())
-
-        self.connect('source', 'discovery', 'preview',
-                     'runner', 'saver', 'status', 'summary')
+        self.add('saver_console', ResultProcessor())
+        self.add('saver', ResultProcessor(report))
+        #self.add('status', TestStatus())
+        self.add('summary_console', TestSummary())
+        self.add('summary', TestSummary(report))
 
 def main():
     global _start_time
 
     parser = _get_parser()
     options = parser.parse_args()
-
-
-    # pipeline
-    #   source(s) of unexpanded test path names (could be dir/module/testcase/method)
-    #      --> optional filter here
-    #      --> test discoverer(s)
-    #      --> iterator of expanded test path names (full module:testcase.method names)
-    #      --> optional filter here
-    #      --> test runner  (may branch to test workers)
-    #      --> result processor(s)
 
     tests = options.tests
     if options.cfg:
