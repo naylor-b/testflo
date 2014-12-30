@@ -36,7 +36,7 @@ from fileutil import find_files, get_module_path, find_module, get_module
 _start_time = 0.0
 
 def read_config_file(cfgfile):
-    """Reads a file containing one testpath per line."""
+    """Reads a file containing one testspec per line."""
 
     with open(os.path.abspath(cfgfile), 'r') as f:
         for line in f:
@@ -72,11 +72,11 @@ def get_testcase(filename, mod, tcasename):
         raise TypeError("'%s' in file '%s' is not a TestCase." %
                         (tcasename, filename))
 
-def parse_test_path(testpath):
+def parse_test_path(testspec):
     """Return a tuple of the form (fname, module, testcase, func)
-    based on the given testpath.
+    based on the given testspec.
 
-    The format of testpath is one of the following:
+    The format of testspec is one of the following:
         <module>
         <module>:<testcase>
         <module>:<testcase>.<method>
@@ -84,12 +84,12 @@ def parse_test_path(testpath):
 
     where <module> is either the python module path or the actual
     file system path to the .py file.  A value of None in the tuple
-    indicates that that part of the testpath was not present.
+    indicates that that part of the testspec was not present.
     """
 
-    testpath = testpath.strip()
+    testspec = testspec.strip()
     testcase = method = errmsg = None
-    module, _, rest = testpath.partition(':')
+    module, _, rest = testspec.partition(':')
 
     fname, mod = get_module(module)
 
@@ -117,9 +117,9 @@ class TestResult(object):
     and start/end times.
     """
 
-    def __init__(self, testpath, start_time, end_time,
+    def __init__(self, testspec, start_time, end_time,
                  status='OK', out_msg='', err_msg=''):
-        self.testpath = testpath
+        self.testspec = testspec
         self.status = status
         self.out_msg = out_msg
         self.err_msg = err_msg
@@ -130,10 +130,10 @@ class TestResult(object):
         return self.end_time - self.start_time
     
     def short_name(self):
-        """Returns the testpath with only the file's basename instead
+        """Returns the testspec with only the file's basename instead
         of its full path.
         """
-        parts = self.testpath.split(':', 1)
+        parts = self.testspec.split(':', 1)
         fname = os.path.basename(parts[0])
         return ':'.join((fname, parts[1]))
 
@@ -182,7 +182,7 @@ class ResultPrinter(object):
         stream.flush()
 
 
-class TestSummary(object):
+class ResultSummary(object):
     """Writes a test summary after all tests are run."""
 
     def __init__(self, stream=sys.stdout):
@@ -244,15 +244,15 @@ def _worker(test_queue, done_queue):
     on the done_queue.
     """
     global _test_runner
-    for testpath in iter(test_queue.get, 'STOP'):
+    for testspec in iter(test_queue.get, 'STOP'):
         try:
-            done_queue.put(_test_runner.run_test(testpath))
+            done_queue.put(_test_runner.run_test(testspec))
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the 
             # end when it tries to join all of the concurrent processes.
             msg = traceback.format_exc()
-            done_queue.put(TestResult(testpath, 0., 0., 'FAIL',
+            done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
                                        '', msg))
 
 
@@ -345,7 +345,7 @@ class TestRunner(object):
         return status
 
     def run_test(self, test):
-        """Runs the test indicated by the given testpath, which has
+        """Runs the test indicated by the given testspec, which has
         the form: 
         """
         
@@ -407,9 +407,9 @@ class TestDiscoverer(object):
         return self._test_strings_iter(input_iter)
 
     def _test_strings_iter(self, input_iter):
-        """Returns an iterator over the expanded testpath
+        """Returns an iterator over the expanded testspec
         strings based on the starting list of
-        directories/modules/testpaths.
+        directories/modules/testspecs.
         """
         seen = set()
         for test in input_iter:
@@ -455,10 +455,10 @@ class TestDiscoverer(object):
             if fnmatch(name, self.func_pattern):
                 yield fname + ':' + testcase.__name__ + '.' + method.__name__
 
-    def _test_path_iter(self, testpath):
-        """Return an iterator of expanded testpath strings found in the
-        module/testcase/method specified in testpath.  The format of
-        testpath is one of the following:
+    def _test_path_iter(self, testspec):
+        """Return an iterator of expanded testspec strings found in the
+        module/testcase/method specified in testspec.  The format of
+        testspec is one of the following:
             <module>
             <module>:<testcase>
             <module>:<testcase>.<method>
@@ -468,17 +468,17 @@ class TestDiscoverer(object):
         file system path to the .py file.
         """
 
-        module, _, rest = testpath.partition(':')
+        module, _, rest = testspec.partition(':')
         if rest:
             tcasename, _, method = rest.partition('.')
             if method:
-                yield testpath
+                yield testspec
             else:  # could be a test function or a TestCase
                 fname, mod = get_module(module)
                 try:
                     tcase = get_testcase(fname, mod, tcasename)
                 except (AttributeError, TypeError):
-                    yield testpath
+                    yield testspec
                 else:
                     for result in self._testcase_iter(fname, tcase):
                         yield result
@@ -522,7 +522,7 @@ def _get_parser():
                         metavar='OUTFILE', default='test_report.out',
                         help='Name of test report file')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='if true, include testpath and elapsed time in '
+                        help='if true, include testspec and elapsed time in '
                              'screen output')
     parser.add_argument('tests', metavar='test', nargs='*',
                        help='a test method/case/module/directory to run')
@@ -558,9 +558,11 @@ def main():
             TestDiscoverer(dir_exclude=lambda t: t in skip_dirs),
             TestRunner(num_procs=options.num_procs),
             ResultPrinter(verbose=options.verbose),
-            ResultPrinter(report),
-            TestSummary(),
-            TestSummary(report),
+            ResultSummary(),
+            
+            # mirror results and summary to the report file
+            ResultPrinter(report, verbose=options.verbose),
+            ResultSummary(report),
         ]
         
         _start_time = time.time()
