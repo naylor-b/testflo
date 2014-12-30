@@ -1,3 +1,6 @@
+testflo
+=======
+
 testflo is a python testing framework that uses a simple pipeline of
 iterators to process test specifications, run the tests, and process the
 results.

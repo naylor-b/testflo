@@ -541,6 +541,7 @@ def main():
     if not tests:
         tests = [os.getcwd()]
 
+    # TODO: make this configurable
     skip_dirs = set(['devenv', 
                      'site-packages',
                      'dist-packages',
