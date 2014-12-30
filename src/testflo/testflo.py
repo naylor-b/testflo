@@ -239,8 +239,8 @@ class ResultSummary(object):
 
 
 def _worker(test_queue, done_queue):
-    """This is used by concurrent test processes. It takes tests 
-    off of the test_queue, runs them, then puts the TestResult object 
+    """This is used by concurrent test processes. It takes a test 
+    off of the test_queue, runs it, then puts the TestResult object 
     on the done_queue.
     """
     global _test_runner
@@ -489,6 +489,8 @@ class TestDiscoverer(object):
 
 def run_pipeline(pipe):
     """Run a pipeline of test iteration objects."""
+    global _start_time
+    _start_time = time.time()
 
     iters = []
     
@@ -530,8 +532,6 @@ def _get_parser():
     return parser
 
 def main():
-    global _start_time
-
     options = _get_parser().parse_args()
 
     tests = options.tests
@@ -554,7 +554,7 @@ def main():
         options.num_procs = cpu_count()
 
     with open(options.outfile, 'w') as report:
-        pipeline = [
+        run_pipeline([
             tests,
             TestDiscoverer(dir_exclude=lambda t: t in skip_dirs),
             TestRunner(num_procs=options.num_procs),
@@ -564,11 +564,7 @@ def main():
             # mirror results and summary to the report file
             ResultPrinter(report, verbose=options.verbose),
             ResultSummary(report),
-        ]
-        
-        _start_time = time.time()
-        
-        run_pipeline(pipeline)
+        ])
 
 
 if __name__ == '__main__':
