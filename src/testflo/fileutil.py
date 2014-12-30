@@ -183,3 +183,29 @@ def find_module(name, path=None, py=True):
             if isfile(f):
                 return f
     return None
+
+def get_module(fname):
+    """Given a filename or module path name, return a tuple
+    of the form (filename, module).
+    """
+    if fname.endswith('.py'):
+        modpath = get_module_path(fname)
+        if not modpath:
+            raise RuntimeError("can't find module %s" % fname)
+    else:
+        modpath = fname
+        fname = find_module(modpath)
+
+        if not fname:
+            raise ImportError("can't import %s" % modpath)
+
+    try:
+        __import__(modpath)
+    except ImportError:
+        sys.path.append(os.path.dirname(fname))
+        try:
+            __import__(modpath)
+        finally:
+            sys.path.pop()
+
+    return fname, sys.modules[modpath]

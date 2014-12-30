@@ -31,11 +31,13 @@ import unittest
 from multiprocessing import Process, Queue, current_process, \
                             freeze_support, cpu_count
 
-from fileutil import find_files, get_module_path, find_module
+from fileutil import find_files, get_module_path, find_module, get_module
 
 _start_time = 0.0
 
 def read_config_file(cfgfile):
+    """Reads a file containing one testpath per line."""
+
     with open(os.path.abspath(cfgfile), 'r') as f:
         for line in f:
             line = line.strip()
@@ -53,31 +55,6 @@ def elapsed_str(elapsed):
         return "%02d:%.2f" % (mins, elapsed)
     else:
         return "%.2f" % elapsed
-
-def get_module(fname):
-    """Given a filename or module path name, return a tuple
-    of the form (filename, module).
-    """
-
-    if fname.endswith('.py'):
-        modpath = get_module_path(fname)
-    else:
-        modpath = fname
-        fname = find_module(modpath)
-
-    if fname is None:
-        return None, None
-
-    try:
-        __import__(modpath)
-    except ImportError:
-        sys.path.append(os.path.dirname(fname))
-        try:
-            __import__(modpath)
-        finally:
-            sys.path.pop()
-
-    return fname, sys.modules[modpath]
 
 def get_testcase(filename, mod, tcasename):
     """Given a module and the name of a TestCase
@@ -113,28 +90,25 @@ def parse_test_path(testpath):
     testpath = testpath.strip()
     testcase = method = errmsg = None
     module, _, rest = testpath.partition(':')
-    
-    try:
-        fname, mod = get_module(module)
 
-        if rest:
-            objname, _, method = rest.partition('.')
-            obj = getattr(mod, objname)
-            if inspect.isclass(obj) and issubclass(obj, unittest.TestCase):
-                testcase = obj
-                if method:
-                    method = getattr(obj, method)
-                    if not isinstance(method, MethodType):
-                        raise TypeError("'%s' is not a method." % rest)
-            elif isinstance(obj, FunctionType):
-                method = obj
-            else:
-                raise TypeError("'%s' is not a TestCase or a function." %
-                                objname)
-    except Exception:
-        errmsg = traceback.format_exc()
+    fname, mod = get_module(module)
 
-    return (fname, mod, testcase, method, errmsg)
+    if rest:
+        objname, _, method = rest.partition('.')
+        obj = getattr(mod, objname)
+        if inspect.isclass(obj) and issubclass(obj, unittest.TestCase):
+            testcase = obj
+            if method:
+                method = getattr(obj, method)
+                if not isinstance(method, MethodType):
+                    raise TypeError("'%s' is not a method." % rest)
+        elif isinstance(obj, FunctionType):
+            method = obj
+        else:
+            raise TypeError("'%s' is not a TestCase or a function." %
+                            objname)
+
+    return (fname, mod, testcase, method)
 
 
 class TestResult(object):
@@ -152,9 +126,6 @@ class TestResult(object):
         self.start_time = start_time
         self.end_time = end_time
 
-    def __str__(self):
-        return self.testpath
-
     def elapsed(self):
         return self.end_time - self.start_time
     
@@ -168,8 +139,11 @@ class TestResult(object):
 
 
 class ResultPrinter(object):
-    """Processes the TestResult objects after tests have
-    been run.
+    """Prints the status and error message (if any) of each TestResult object
+    after its test has been run if verbose is True.  If verbose is False,
+    it displays a dot for each successful test, an 'S' for skipped tests,
+    and an 'F' for failed tests.  If a test fails, the error message is always
+    displayed, even in non-verbose mode.
     """
 
     def __init__(self, stream=sys.stdout, verbose=False):
@@ -177,14 +151,14 @@ class ResultPrinter(object):
         self.verbose = verbose
 
     def get_iter(self, input_iter):
-        return self.process_results(input_iter)
+        return self._print_iter(input_iter)
 
-    def process_results(self, input_iter):
+    def _print_iter(self, input_iter):
         for result in input_iter:
-            self.process(result)
+            self._print_result(result)
             yield result
 
-    def process(self, result):
+    def _print_result(self, result):
         stream = self.stream
         if self.verbose:
             stream.write("%s ... %s (%s)\n" % (result.short_name(), 
@@ -209,6 +183,8 @@ class ResultPrinter(object):
 
 
 class TestSummary(object):
+    """Writes a test summary after all tests are run."""
+
     def __init__(self, stream=sys.stdout):
         self.stream = stream
 
@@ -263,9 +239,21 @@ class TestSummary(object):
 
 
 def _worker(test_queue, done_queue):
+    """This is used by concurrent test processes. It takes tests 
+    off of the test_queue, runs them, then puts the TestResult object 
+    on the done_queue.
+    """
     global _test_runner
     for testpath in iter(test_queue.get, 'STOP'):
-        done_queue.put(_test_runner.run_test(testpath))
+        try:
+            done_queue.put(_test_runner.run_test(testpath))
+        except:
+            # we generally shouldn't get here, but just in case,
+            # handle it so that the main process doesn't hang at the 
+            # end when it tries to join all of the concurrent processes.
+            msg = traceback.format_exc()
+            done_queue.put(TestResult(testpath, 0., 0., 'FAIL',
+                                       '', msg))
 
 
 class TestRunner(object):
@@ -363,12 +351,9 @@ class TestRunner(object):
         
         start_time = time.time()
 
-        fname, mod, testcase, method, errmsg = parse_test_path(test)
+        fname, mod, testcase, method = parse_test_path(test)
 
-        if errmsg:
-            return TestResult(test, start_time, time.time(), 'FAIL',
-                              '', errmsg)
-        elif method is None:
+        if method is None:
             return TestResult(test, start_time, time.time(), 'FAIL',
                               '', 'ERROR: test method not specified.')
 
@@ -429,15 +414,14 @@ class TestDiscoverer(object):
         seen = set()
         for test in input_iter:
             if os.path.isdir(test):
-                for result in self._dir_iter(test):
-                    if result not in seen:
-                        seen.add(result)
-                        yield result
+                itr = self._dir_iter
             else:
-                for result in self._test_path_iter(test):
-                    if result not in seen:
-                        seen.add(result)
-                        yield result
+                itr = self._test_path_iter
+
+            for result in itr(test):
+                if result not in seen:
+                    seen.add(result)
+                    yield result
 
     def _dir_iter(self, dname):
         for f in find_files(dname, match=self.module_pattern,
@@ -449,8 +433,8 @@ class TestDiscoverer(object):
     def _module_iter(self, filename):
         try:
             fname, mod = get_module(filename)
-        except ImportError:
-            sys.stderr.write("couldn't import filename %s\n" % filename)
+        except:
+            sys.stderr.write(traceback.format_exc())
         else:
             if os.path.basename(fname).startswith('__init__.'):
                 for result in self._dir_iter(os.path.dirname(fname)):
