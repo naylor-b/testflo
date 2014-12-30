@@ -35,16 +35,6 @@ from fileutil import find_files, get_module_path, find_module
 
 _start_time = 0.0
 
-_exclude_dirs = set(['devenv', 
-                     'site-packages',
-                     'dist-packages',
-                     'build',
-                     'contrib'])
-                     
-def _exclude_dir(dname):
-    global _exclude_dirs
-    return dname in _exclude_dirs
-
 def read_config_file(cfgfile):
     with open(os.path.abspath(cfgfile), 'r') as f:
         for line in f:
@@ -419,9 +409,14 @@ _test_runner = TestRunner(num_procs=1)
 class TestDiscoverer(object):
 
     def __init__(self, module_pattern='test*.py',
-                       func_pattern='test*'):
+                       func_pattern='test*',
+                       dir_exclude=None):
         self.module_pattern = module_pattern
         self.func_pattern = func_pattern
+        self.dir_exclude = dir_exclude
+
+    def _exclude_dir(dname):
+        return dname in self.dir_exclude
 
     def get_iter(self, input_iter):
         return self._test_strings_iter(input_iter)
@@ -446,25 +441,30 @@ class TestDiscoverer(object):
 
     def _dir_iter(self, dname):
         for f in find_files(dname, match=self.module_pattern,
-                            direxclude=_exclude_dir):
-            for result in self._module_iter(f):
-                yield result
+                            direxclude=self.dir_exclude):
+            if not os.path.basename(f).startswith('__init__.'):
+                for result in self._module_iter(f):
+                    yield result
 
     def _module_iter(self, filename):
         try:
             fname, mod = get_module(filename)
         except ImportError:
-            pass
+            sys.stderr.write("couldn't import filename %s\n" % filename)
         else:
-            for name, obj in inspect.getmembers(mod):
-                if inspect.isclass(obj):
-                    if issubclass(obj, unittest.TestCase):
-                        for result in self._testcase_iter(filename, obj):
-                            yield result
+            if os.path.basename(fname).startswith('__init__.'):
+                for result in self._dir_iter(os.path.dirname(fname)):
+                    yield result
+            else:
+                for name, obj in inspect.getmembers(mod):
+                    if inspect.isclass(obj):
+                        if issubclass(obj, unittest.TestCase):
+                            for result in self._testcase_iter(filename, obj):
+                                yield result
 
-                elif inspect.isfunction(obj):
-                    if fnmatch(name, self.func_pattern):
-                        yield ':'.join((filename, obj.__name__))
+                    elif inspect.isfunction(obj):
+                        if fnmatch(name, self.func_pattern):
+                            yield ':'.join((filename, obj.__name__))
 
     def _testcase_iter(self, fname, testcase):
         for name, method in inspect.getmembers(testcase, inspect.ismethod):
@@ -530,13 +530,16 @@ def _get_parser():
                         metavar='CONFIG',
                         help='Path of config file where tests are specified.')
     parser.add_argument('-n', '--numprocs', type=int, action='store', 
-                        dest='num_procs', metavar='NUM_PROCS', default=1,
-                        help='Number of processes to run')
+                        dest='num_procs', metavar='NUM_PROCS', default=0,
+                        help='Number of processes to run. By default, this will '
+                             'use the number of CPUs available.  To force serial'
+                             ' execution, specify a value of 1.')
     parser.add_argument('-o', '--outfile', action='store', dest='outfile',
                         metavar='OUTFILE', default='test_report.out',
                         help='Name of test report file')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='if true, include testpath and elapsed time in screen output')
+                        help='if true, include testpath and elapsed time in '
+                             'screen output')
     parser.add_argument('tests', metavar='test', nargs='*',
                        help='a test method/case/module/directory to run')
 
@@ -554,10 +557,21 @@ def main():
     if not tests:
         tests = [os.getcwd()]
 
+    skip_dirs = set(['devenv', 
+                     'site-packages',
+                     'dist-packages',
+                     'build',
+                     'contrib'])
+
+    # by default, we'll use number of CPUs the system has.
+    # User can force serial execution by specifying num_procs = 1
+    if options.num_procs == 0:
+        options.num_procs = cpu_count()
+
     with open(options.outfile, 'w') as report:
         pipeline = [
             tests,
-            TestDiscoverer(),
+            TestDiscoverer(dir_exclude=lambda t: t in skip_dirs),
             TestRunner(num_procs=options.num_procs),
             ResultPrinter(verbose=options.verbose),
             ResultPrinter(report),
