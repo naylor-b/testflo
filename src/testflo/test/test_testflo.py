@@ -1,6 +1,3 @@
 import unittest
 
-class MyTestCase(unittest.TestCase):
-    def test_foo(self):
-        print "foo!"
-
+# TODO: add some self-contained tests
