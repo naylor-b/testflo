@@ -329,7 +329,6 @@ class TestRunner(object):
                     status = 'SKIP'
                 else:
                     status = 'FAIL'
-                    #msg = ''.join(traceback.format_exception(err[0],err[1],err[2]))
                     sys.stderr.write(msg)
             finally:
                 sys.stderr = old_err
@@ -417,6 +416,7 @@ class TestDiscoverer(object):
                     yield result
 
     def _dir_iter(self, dname):
+        """Iterate over all testspecs in a directory."""
         for f in find_files(dname, match=self.module_pattern,
                             direxclude=self.dir_exclude):
             if not os.path.basename(f).startswith('__init__.'):
@@ -424,6 +424,7 @@ class TestDiscoverer(object):
                     yield result
 
     def _module_iter(self, filename):
+        """Iterate over all testspecs in a module."""
         try:
             fname, mod = get_module(filename)
         except:
@@ -444,12 +445,13 @@ class TestDiscoverer(object):
                             yield ':'.join((filename, obj.__name__))
 
     def _testcase_iter(self, fname, testcase):
+        """Iterate over all testspecs found in a TestCase class."""
         for name, method in inspect.getmembers(testcase, inspect.ismethod):
             if fnmatch(name, self.func_pattern):
                 yield fname + ':' + testcase.__name__ + '.' + method.__name__
 
     def _test_path_iter(self, testspec):
-        """Return an iterator of expanded testspec strings found in the
+        """Iterate over expanded testspec strings found in the
         module/testcase/method specified in testspec.  The format of
         testspec is one of the following:
             <module>
@@ -490,6 +492,8 @@ def run_pipeline(pipe):
     if len(pipe) < 2:
         raise RuntimeError("test pipeline must have at least 2 members.")
     
+    # The source of the pipeline is allowed to be just a simple iterator
+    # since it doesn't need an input iterator.
     if hasattr(pipe[0], 'get_iter'):
         iters.append(pipe[0].get_iter(None))
     else:
@@ -499,10 +503,13 @@ def run_pipeline(pipe):
     for i,p in enumerate(pipe[1:]):
         iters.append(p.get_iter(iters[i]))
 
+    # iterate over the last iter in the pipline and we're done
     for result in iters[-1]:
         pass
 
 def _get_parser():
+    """Returns a parser to handle command line args."""
+    
     parser = ArgumentParser()
     parser.usage = "testease [options]"
     parser.add_argument('-c', '--config', action='store', dest='cfg',
