@@ -5,9 +5,15 @@ testflo is a python testing framework that uses a simple pipeline of
 iterators to process test specifications, run the tests, and process the
 results.
 
-In terms of behavior, I tried to make it similar to the python 'nose' framework,
+In terms of behavior, I tried to make it similar to the 'nose' framework,
 although testflo has only a small subset of the command line options that
-nosetests has.
+nosetests has.  testflow doesn't use any of the unittest or nose frameworks,
+aside from unittest.TestCase, which it treats basically as a container of test
+methods, and the unittest.SkipTest exception, which it uses to identify 
+skipped tests.  Aside from executing test methods within a TestCase, along
+with the setUp and tearDown methods if found, no other methods or attributes of 
+TestCase are used.  testflo simply executes the setUp, test_, and tearDown
+methods and catches exceptions to detect failures or skips.
 
 By default, testflo uses the multiprocessing library to run tests concurrently,
 setting the number of processes equal to the number of CPUs on your computer.
