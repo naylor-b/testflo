@@ -531,10 +531,21 @@ def main():
     options = _get_parser().parse_args()
 
     options.skip_dirs = []
+    
+    # read user prefs from ~/.testflo file.  create one if it
+    # isn't there
     homedir = os.path.expanduser('~')
     rcfile = os.path.join(homedir, '.testflo')
-    if os.path.isfile(rcfile):
-        read_config_file(rcfile, options)
+    if not os.path.isfile(rcfile):
+        with open(rcfile, 'w') as f:
+            f.write("""[testflo]
+skip_dirs=site-packages,
+    dist-packages,
+    build,
+    contrib
+""" )
+    read_config_file(rcfile, options)
+    
     tests = options.tests
     if options.cfg:
         read_config_file(options.cfg, options)
