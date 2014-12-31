@@ -9,7 +9,7 @@ import shutil
 import warnings
 import itertools
 import string
-from hashlib import md5
+import ConfigParser
 
 from fnmatch import fnmatch
 from os.path import isdir, join, dirname, basename, exists, isfile, \
@@ -209,3 +209,19 @@ def get_module(fname):
             sys.path.pop()
 
     return fname, sys.modules[modpath]
+
+def read_test_file(testfile):
+    """Reads a file containing one testspec per line."""
+    with open(os.path.abspath(testfile), 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                yield line
+
+def read_config_file(cfgfile, options):
+    config = ConfigParser.ConfigParser()
+    config.readfp(open(cfgfile))
+
+    if config.has_option('testflo', 'skip_dirs'):
+        skips = config.get('testflo', 'skip_dirs')
+        options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]

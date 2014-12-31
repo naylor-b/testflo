@@ -30,19 +30,12 @@ from fnmatch import fnmatch
 import unittest
 from multiprocessing import Process, Queue, current_process, \
                             freeze_support, cpu_count
+import ConfigParser
 
-from fileutil import find_files, get_module_path, find_module, get_module
+from fileutil import find_files, get_module_path, find_module, get_module, \
+                     read_config_file
 
 _start_time = 0.0
-
-def read_config_file(cfgfile):
-    """Reads a file containing one testspec per line."""
-
-    with open(os.path.abspath(cfgfile), 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                yield line
 
 def elapsed_str(elapsed):
     hrs = int(elapsed/3600)
@@ -514,7 +507,10 @@ def _get_parser():
     parser.usage = "testease [options]"
     parser.add_argument('-c', '--config', action='store', dest='cfg',
                         metavar='CONFIG',
-                        help='Path of config file where tests are specified.')
+                        help='Path of config file where preferences are specified.')
+    parser.add_argument('-t', '--testfile', action='store', dest='testfile',
+                        metavar='TESTFILE',
+                        help='Path to a file containing one testspec per line.')
     parser.add_argument('-n', '--numprocs', type=int, action='store', 
                         dest='num_procs', metavar='NUM_PROCS', default=0,
                         help='Number of processes to run. By default, this will '
@@ -534,19 +530,16 @@ def _get_parser():
 def main():
     options = _get_parser().parse_args()
 
+    options.skip_dirs = []
+    homedir = os.path.expanduser('~')
+    rcfile = os.path.join(homedir, '.testflo')
+    if os.path.isfile(rcfile):
+        read_config_file(rcfile, options)
     tests = options.tests
     if options.cfg:
-        tests.extend(read_config_file(options.cfg))
-
-    if not tests:
+        read_config_file(options.cfg, options)
+    elif not tests:
         tests = [os.getcwd()]
-
-    # TODO: make this configurable
-    skip_dirs = set(['devenv', 
-                     'site-packages',
-                     'dist-packages',
-                     'build',
-                     'contrib'])
 
     # by default, we'll use number of CPUs the system has.
     # User can force serial execution by specifying num_procs = 1
@@ -556,7 +549,7 @@ def main():
     with open(options.outfile, 'w') as report:
         run_pipeline([
             tests,
-            TestDiscoverer(dir_exclude=lambda t: t in skip_dirs),
+            TestDiscoverer(dir_exclude=lambda t: os.path.basename(t) in options.skip_dirs),
             TestRunner(num_procs=options.num_procs),
             ResultPrinter(verbose=options.verbose),
             ResultSummary(),
