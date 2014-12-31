@@ -3,18 +3,15 @@ testflo is a python testing framework that takes an iterator of test
 specifier names e.g., <test_module>:<testcase>.<test_method>), and feeds
 them through a pipeline of objects that operate on them and transform them
 into TestResult objects, then pass them on to other objects in the pipeline.
-The goal is to make it very easy to modify and extend because of the simplicity
-of the API and the simplicity of the objects being passed through the
-pipeline.
 
-The objects passed through the pipline are either simple strings that
-indicate which test to run, or TestReult objects, which are also simple
-and contain only the test specifier string, a status indicating whether
-the test passed or failed, and captured stdout and stderr from the running
-of the test.
+The objects passed through the pipline are either strings that
+indicate which test to run (I call them test specifiers), or TestReult 
+objects, which contain only the test specifier string, a status indicating 
+whether the test passed or failed, and captured stdout and stderr from the 
+running of the test.
 
 The API necessary for objects that participate in the pipeline is a single
-method called get_iter(input_iter).
+method called get_iter(input_iter) that returns an iterator.
 
 """
 
@@ -572,7 +569,7 @@ skip_dirs=site-packages,
             ResultPrinter(verbose=options.verbose),
             ResultSummary(),
             
-            # mirror results and summary to the report file
+            # mirror results and summary to a report file
             ResultPrinter(report, verbose=options.verbose),
             ResultSummary(report),
         ])
