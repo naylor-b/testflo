@@ -16,5 +16,4 @@ As usual, -h on the command line will list all of the available command line
 arguments.
 
 So far, testflo has only been tested on linux and OS X with python 2.7.  
-If you try it out and have any feedback, put it in the testflo issue tracker 
-on bitbucket.
+If you try it out and have any feedback, submit it as an issue on github.
