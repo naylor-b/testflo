@@ -179,9 +179,9 @@ class ResultSummary(object):
         self.stream = stream
 
     def get_iter(self, input_iter):
-        return self.summarize(input_iter)
+        return self._iter_then_summarize(input_iter)
 
-    def summarize(self, input_iter):
+    def _iter_then_summarize(self, input_iter):
         global _start_time
 
         oks = 0
@@ -254,6 +254,7 @@ class TestRunner(object):
     def __init__(self, num_procs=cpu_count()):
         self.num_procs = num_procs
         
+        # only do multiprocessing stuff if num_procs > 1
         if num_procs > 1:
             # Create queues
             self.task_queue = Queue()
@@ -275,10 +276,13 @@ class TestRunner(object):
 
     def run_tests(self, input_iter):
         """Run tests serially."""
+
         for test in input_iter:
             yield self.run_test(test)
 
     def run_concurrent_tests(self, input_iter):
+        """Run test concurrently."""
+
         it = iter(input_iter)
         numtests = 0
         try:
@@ -334,8 +338,8 @@ class TestRunner(object):
         return status
 
     def run_test(self, test):
-        """Runs the test indicated by the given testspec, which has
-        the form: 
+        """Runs the test indicated by the given 'specific' testspec, which
+        specifies an individual test function or method.
         """
         
         start_time = time.time()
@@ -396,7 +400,7 @@ class TestDiscoverer(object):
         return self._test_strings_iter(input_iter)
 
     def _test_strings_iter(self, input_iter):
-        """Returns an iterator over the expanded testspec
+        """Returns an iterator over 'specific' testspec
         strings based on the starting list of
         directories/modules/testspecs.
         """
