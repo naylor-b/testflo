@@ -7,7 +7,7 @@ into TestResult objects, then pass them on to other objects in the pipeline.
 The objects passed through the pipline are either strings that
 indicate which test to run (I call them test specifiers), or TestReult 
 objects, which contain only the test specifier string, a status indicating 
-whether the test passed or failed, and captured stdout and stderr from the 
+whether the test passed or failed, and captured stderr from the 
 running of the test.
 
 The API necessary for objects that participate in the pipeline is a single
@@ -108,10 +108,9 @@ class TestResult(object):
     """
 
     def __init__(self, testspec, start_time, end_time,
-                 status='OK', out_msg='', err_msg=''):
+                 status='OK', err_msg=''):
         self.testspec = testspec
         self.status = status
-        self.out_msg = out_msg
         self.err_msg = err_msg
         self.start_time = start_time
         self.end_time = end_time
@@ -242,8 +241,7 @@ def _worker(test_queue, done_queue):
             # handle it so that the main process doesn't hang at the 
             # end when it tries to join all of the concurrent processes.
             msg = traceback.format_exc()
-            done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
-                                       '', msg))
+            done_queue.put(TestResult(testspec, 0., 0., 'FAIL', msg))
 
 
 class TestRunner(object):
@@ -251,8 +249,9 @@ class TestRunner(object):
     to execute tests concurrently.
     """
     
-    def __init__(self, num_procs=cpu_count()):
+    def __init__(self, num_procs=cpu_count(), nocap_stdout=False):
         self.num_procs = num_procs
+        self.nocap_stdout = nocap_stdout
         
         # only do multiprocessing stuff if num_procs > 1
         if num_procs > 1:
@@ -348,7 +347,7 @@ class TestRunner(object):
 
         if method is None:
             return TestResult(test, start_time, time.time(), 'FAIL',
-                              '', 'ERROR: test method not specified.')
+                              'ERROR: test method not specified.')
 
         if testcase:
             testcase = testcase(methodName=method.__name__)
@@ -356,7 +355,10 @@ class TestRunner(object):
         else:
             parent = mod
 
-        outstream = StringIO()
+        if self.nocap_stdout:
+            outstream = sys.stdout
+        else:
+            outstream = StringIO()
         errstream = StringIO()
 
         status = self._try_call(getattr(parent, 'setUp', None),
@@ -372,16 +374,12 @@ class TestRunner(object):
                 status = tdstatus
 
             result = TestResult(test, start_time, time.time(), status,
-                                outstream.getvalue(), errstream.getvalue())
+                                errstream.getvalue())
         else:
             result = TestResult(test, start_time, time.time(), status,
-                                outstream.getvalue(), errstream.getvalue())
+                                errstream.getvalue())
 
         return result
-
-
-# use this test runner in the concurrent workers
-_test_runner = TestRunner(num_procs=1)
 
 
 class TestDiscoverer(object):
@@ -530,12 +528,18 @@ def _get_parser():
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help='if true, include testspec and elapsed time in '
                              'screen output')
+    parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
+                        help="if true, stdout will not be captured and will be"
+                             " written to the screen immediately")
     parser.add_argument('tests', metavar='test', nargs='*',
                        help='a test method/case/module/directory to run')
 
     return parser
 
+_test_runner = None
+
 def main():
+    global _test_runner
     options = _get_parser().parse_args()
 
     options.skip_dirs = []
@@ -565,11 +569,20 @@ skip_dirs=site-packages,
     if options.num_procs == 0:
         options.num_procs = cpu_count()
 
+    # use this test runner in the concurrent workers
+    _test_runner = TestRunner(num_procs=1, nocap_stdout=options.nocapture)
+
+    def dir_exclude(d):
+        for skip in options.skip_dirs:
+            if fnmatch(os.path.basename(d), skip):
+                return True
+        return False
+
     with open(options.outfile, 'w') as report:
         run_pipeline([
             tests,
-            TestDiscoverer(dir_exclude=lambda t: os.path.basename(t) in options.skip_dirs),
-            TestRunner(num_procs=options.num_procs),
+            TestDiscoverer(dir_exclude=dir_exclude),
+            TestRunner(num_procs=options.num_procs, nocap_stdout=options.nocapture),
             ResultPrinter(verbose=options.verbose),
             ResultSummary(),
             
