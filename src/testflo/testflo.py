@@ -150,7 +150,7 @@ class ResultPrinter(object):
     def _print_result(self, result):
         stream = self.stream
         if self.verbose:
-            stream.write("%s ... %s (%s)\n" % (result.short_name(), 
+            stream.write("%s ... %s (%s)\n" % (result.testspec, 
                                                result.status,
                                                elapsed_str(result.elapsed())))
         elif result.status == 'OK':
@@ -162,7 +162,7 @@ class ResultPrinter(object):
 
         if result.err_msg and result.status == 'FAIL':
             if not self.verbose:
-                stream.write("\n%s ... %s (%s)\n" % (result.short_name(), 
+                stream.write("\n%s ... %s (%s)\n" % (result.testspec, 
                                                      result.status,
                                                      elapsed_str(result.elapsed())))
             stream.write(result.err_msg)
