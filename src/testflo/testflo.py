@@ -488,9 +488,6 @@ def run_pipeline(pipe):
 
     iters = []
     
-    if len(pipe) < 2:
-        raise RuntimeError("test pipeline must have at least 2 members.")
-    
     # The source of the pipeline is allowed to be just a simple iterator
     # since it doesn't need an input iterator.
     if hasattr(pipe[0], 'get_iter'):
