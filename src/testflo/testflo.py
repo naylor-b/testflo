@@ -39,12 +39,7 @@ def elapsed_str(elapsed):
     elapsed -= (hrs * 3600)
     mins = int(elapsed/60)
     elapsed -= (mins * 60)
-    if hrs:
-        return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
-    elif mins:
-        return "%02d:%.2f" % (mins, elapsed)
-    else:
-        return "%.2f" % elapsed
+    return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
 def get_testcase(filename, mod, tcasename):
     """Given a module and the name of a TestCase
