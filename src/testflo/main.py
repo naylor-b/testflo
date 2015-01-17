@@ -10,8 +10,8 @@ objects, which contain only the test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
 
-The API necessary for objects that participate in the pipeline is a single
-method called get_iter(input_iter) that returns an iterator.
+The API necessary for objects that participate in the pipeline is a callable
+that takes an input iterator and returns an output iterator.
 
 """
 
@@ -28,22 +28,6 @@ from testflo.discover import TestDiscoverer
 
 from testflo.fileutil import read_config_file
 
-
-def run_pipeline(source, pipe):
-    """Run a pipeline of test iteration objects."""
-
-    global _start_time
-    _start_time = time.time()
-
-    iters = [source]
-
-    # give each object the iterator from upstream in the pipeline
-    for i,p in enumerate(pipe):
-        iters.append(p.get_iter(iters[i]))
-
-    # iterate over the last iter in the pipline and we're done
-    for result in iters[-1]:
-        pass
 
 def _get_parser():
     """Returns a parser to handle command line args."""
@@ -74,6 +58,22 @@ def _get_parser():
                        help='a test method/case/module/directory to run')
 
     return parser
+
+def run_pipeline(source, pipe):
+    """Run a pipeline of test iteration objects."""
+
+    global _start_time
+    _start_time = time.time()
+
+    iters = [source]
+
+    # give each object the iterator from upstream in the pipeline
+    for i,p in enumerate(pipe):
+        iters.append(p(iters[i]))
+
+    # iterate over the last iter in the pipline and we're done
+    for result in iters[-1]:
+        pass
 
 def main():
     options = _get_parser().parse_args()
@@ -109,14 +109,14 @@ skip_dirs=site-packages,
     with open(options.outfile, 'w') as report:
         run_pipeline(tests,
         [
-            TestDiscoverer(dir_exclude=dir_exclude),
-            TestRunner(options),
-            ResultPrinter(verbose=options.verbose),
-            ResultSummary(),
+            TestDiscoverer(dir_exclude=dir_exclude).get_iter,
+            TestRunner(options).get_iter,
+            ResultPrinter(verbose=options.verbose).get_iter,
+            ResultSummary().get_iter,
 
             # mirror results and summary to a report file
-            ResultPrinter(report, verbose=options.verbose),
-            ResultSummary(report),
+            ResultPrinter(report, verbose=options.verbose).get_iter,
+            ResultSummary(report).get_iter,
         ])
 
 

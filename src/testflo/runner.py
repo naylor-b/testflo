@@ -11,6 +11,7 @@ from multiprocessing import Queue, Process
 
 from testflo.fileutil import get_module
 from testflo.result import TestResult
+from testflo.devnull import DevNull
 
 
 def parse_test_path(testspec):
@@ -66,6 +67,25 @@ def get_testcase(filename, mod, tcasename):
     else:
         raise TypeError("'%s' in file '%s' is not a TestCase." %
                         (tcasename, filename))
+
+def try_call(method):
+    """Calls the given method, captures stdout and stderr,
+    and returns the status (OK, SKIP, FAIL).
+    """
+    status = 'OK'
+    try:
+        method()
+    except Exception as e:
+        msg = traceback.format_exc()
+        if isinstance(e, unittest.SkipTest):
+            status = 'SKIP'
+            sys.stderr.write(str(e))
+        else:
+            status = 'FAIL'
+            sys.stderr.write(msg)
+
+    return status
+
 
 def worker(runner, test_queue, done_queue):
     """This is used by concurrent test processes. It takes a test
@@ -151,24 +171,6 @@ class TestRunner(object):
         for proc in self.procs:
             proc.join()
 
-    def _try_call(self, method):
-        """Calls the given method, captures stdout and stderr,
-        and returns the status (OK, SKIP, FAIL).
-        """
-        status = 'OK'
-        try:
-            method()
-        except Exception as e:
-            msg = traceback.format_exc()
-            if isinstance(e, unittest.SkipTest):
-                status = 'SKIP'
-                sys.stderr.write(str(e))
-            else:
-                status = 'FAIL'
-                sys.stderr.write(msg)
-
-        return status
-
     def run_test(self, test):
         """Runs the test indicated by the given 'specific' testspec, which
         specifies an individual test function or method.
@@ -191,7 +193,7 @@ class TestRunner(object):
         if self.nocap_stdout:
             outstream = sys.stdout
         else:
-            outstream = StringIO()
+            outstream = DevNull()
         errstream = StringIO()
 
         setup = getattr(parent, 'setUp', None)
@@ -208,16 +210,16 @@ class TestRunner(object):
 
             # if there's a setUp method, run it
             if setup:
-                status = self._try_call(setup)
+                status = try_call(setup)
                 if status != 'OK':
                     run_method = False
                     run_td = False
 
             if run_method:
-                status = self._try_call(getattr(parent, method.__name__))
+                status = try_call(getattr(parent, method.__name__))
 
             if teardown and run_td:
-                tdstatus = self._try_call(teardown)
+                tdstatus = try_call(teardown)
                 if status == 'OK':
                     status = tdstatus
 
@@ -229,4 +231,3 @@ class TestRunner(object):
             sys.stdout = old_out
 
         return result
-
