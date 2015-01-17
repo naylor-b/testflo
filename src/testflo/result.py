@@ -50,9 +50,6 @@ class ResultPrinter(object):
         self.verbose = verbose
 
     def get_iter(self, input_iter):
-        return self._print_iter(input_iter)
-
-    def _print_iter(self, input_iter):
         for result in input_iter:
             self._print_result(result)
             yield result
@@ -71,12 +68,11 @@ class ResultPrinter(object):
         elif result.status == 'SKIP':
             stream.write('S')
 
-        if result.err_msg and result.status == 'FAIL':
-            if not self.verbose:
-                stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
-                                                         result.status,
-                                                         elapsed_str(result.elapsed()),
-                                                         result.err_msg))
+        if not self.verbose and result.err_msg and result.status == 'FAIL':
+            stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
+                                                     result.status,
+                                                     elapsed_str(result.elapsed()),
+                                                     result.err_msg))
         stream.flush()
 
 
@@ -88,11 +84,6 @@ class ResultSummary(object):
         self._start_time = time.time()
 
     def get_iter(self, input_iter):
-        return self._iter_then_summarize(input_iter)
-
-    def _iter_then_summarize(self, input_iter):
-        global _start_time
-
         oks = 0
         total = 0
         fails = []
@@ -111,6 +102,7 @@ class ResultSummary(object):
                 skips.append(test.short_name())
             yield test
 
+        # now summarize the run
         if skips:
             write("\n\nThe following tests were skipped:\n")
             for s in sorted(skips):
