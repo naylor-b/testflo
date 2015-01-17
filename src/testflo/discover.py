@@ -11,6 +11,15 @@ from os.path import basename, dirname, isdir
 from testflo.fileutil import find_files, get_module
 from testflo.runner import get_testcase
 
+def dryrun(input_iter):
+    """Iterator added to the pipeline when user only wants
+    a dry run, listing all of the discovered tests but not
+    actually running them.
+    """
+    for spec in input_iter:
+        print spec
+        yield spec
+
 class TestDiscoverer(object):
 
     def __init__(self, module_pattern='test*.py',
@@ -21,9 +30,6 @@ class TestDiscoverer(object):
         self.dir_exclude = dir_exclude
 
     def get_iter(self, input_iter):
-        return self._test_iter(input_iter)
-
-    def _test_iter(self, input_iter):
         """Returns an iterator over 'specific' testspec
         strings based on the starting list of
         directories/modules/testspecs.
@@ -76,9 +82,13 @@ class TestDiscoverer(object):
     def _testcase_iter(self, fname, testcase):
         """Iterate over all testspecs found in a TestCase class."""
 
+        methods = []
         for name, method in inspect.getmembers(testcase, inspect.ismethod):
             if fnmatch(name, self.func_pattern):
-                yield ''.join((fname, ':', testcase.__name__, '.', method.__name__))
+                methods.append(''.join((fname, ':', testcase.__name__,
+                                               '.', method.__name__)))
+        for m in sorted(methods):
+            yield m
 
     def _testspec_iter(self, testspec):
         """Iterate over expanded testspec strings found in the
@@ -105,9 +115,8 @@ class TestDiscoverer(object):
                 except (AttributeError, TypeError):
                     yield testspec
                 else:
-                    for result in self._testcase_iter(fname, tcase):
-                        yield result
+                    for spec in self._testcase_iter(fname, tcase):
+                        yield spec
         else:
-            for result in self._module_iter(module):
-                yield result
-
+            for spec in self._module_iter(module):
+                yield spec

@@ -86,7 +86,6 @@ def try_call(method):
 
     return status
 
-
 def worker(runner, test_queue, done_queue):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the TestResult object
@@ -112,6 +111,7 @@ class TestRunner(object):
         self.num_procs = options.num_procs
         self.nocap_stdout = options.nocapture
         self.get_iter = self.run_tests
+        self.stop = options.stop
 
         # only do multiprocessing stuff if num_procs > 1
         if self.num_procs > 1:
@@ -139,7 +139,10 @@ class TestRunner(object):
         """Run tests serially."""
 
         for test in input_iter:
-            yield self.run_test(test)
+            result = self.run_test(test)
+            yield result
+            if self.stop and result.status == 'FAIL':
+                break
 
     def run_concurrent_tests(self, input_iter):
         """Run test concurrently."""
@@ -155,8 +158,11 @@ class TestRunner(object):
         else:
             try:
                 while numtests:
-                    yield self.done_queue.get()
+                    result = self.done_queue.get()
+                    yield result
                     numtests -= 1
+                    if self.stop and result.status == 'FAIL':
+                        break
                     self.task_queue.put(it.next())
                     numtests += 1
             except StopIteration:
@@ -178,8 +184,11 @@ class TestRunner(object):
 
         start_time = time.time()
 
-        fname, mod, testcase, method = parse_test_path(test)
-
+        try:
+            fname, mod, testcase, method = parse_test_path(test)
+        except Exception:
+            return TestResult(test, start_time, time.time(), 'FAIL',
+                              traceback.format_exc())
         if method is None:
             return TestResult(test, start_time, time.time(), 'FAIL',
                               'ERROR: test method not specified.')

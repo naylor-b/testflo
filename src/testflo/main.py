@@ -24,9 +24,10 @@ from multiprocessing import cpu_count
 
 from testflo.runner import TestRunner
 from testflo.result import ResultPrinter, ResultSummary
-from testflo.discover import TestDiscoverer
+from testflo.discover import TestDiscoverer, dryrun
+from testflo.timefilt import TimeFilter
 
-from testflo.fileutil import read_config_file
+from testflo.fileutil import read_config_file, read_test_file
 
 
 def _get_parser():
@@ -40,6 +41,10 @@ def _get_parser():
     parser.add_argument('-t', '--testfile', action='store', dest='testfile',
                         metavar='TESTFILE',
                         help='Path to a file containing one testspec per line.')
+    parser.add_argument('--maxtime', action='store', dest='maxtime',
+                        metavar='TIME_LIMIT', default=-1, type=float,
+                        help='Specifies a time limit for tests to be saved to '
+                             'the quicktests.in file.')
     parser.add_argument('-n', '--numprocs', type=int, action='store',
                         dest='num_procs', metavar='NUM_PROCS', default=cpu_count(),
                         help='Number of processes to run. By default, this will '
@@ -51,6 +56,11 @@ def _get_parser():
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help='if true, include testspec and elapsed time in '
                              'screen output')
+    parser.add_argument('--dryrun', action='store_true', dest='dryrun',
+                        help="if true, don't actually run tests, but report"
+                          "which tests would have been run")
+    parser.add_argument('-x', '--stop', action='store_true', dest='stop',
+                        help="if true, stop after the first test failure")
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
                         help="if true, stdout will not be captured and will be"
                              " written to the screen immediately")
@@ -93,11 +103,14 @@ skip_dirs=site-packages,
     contrib
 """ )
     read_config_file(rcfile, options)
-
-    tests = options.tests
     if options.cfg:
         read_config_file(options.cfg, options)
-    elif not tests:
+
+    tests = options.tests
+    if options.testfile:
+        tests += list(read_test_file(options.testfile))
+
+    if not tests:
         tests = [os.getcwd()]
 
     def dir_exclude(d):
@@ -107,17 +120,32 @@ skip_dirs=site-packages,
         return False
 
     with open(options.outfile, 'w') as report:
-        run_pipeline(tests,
-        [
+        pipeline = [
             TestDiscoverer(dir_exclude=dir_exclude).get_iter,
-            TestRunner(options).get_iter,
-            ResultPrinter(verbose=options.verbose).get_iter,
-            ResultSummary().get_iter,
+        ]
 
-            # mirror results and summary to a report file
-            ResultPrinter(report, verbose=options.verbose).get_iter,
-            ResultSummary(report).get_iter,
-        ])
+        if options.dryrun:
+            pipeline.extend(
+                [
+                    dryrun,
+                ]
+            )
+        else:
+            pipeline.extend(
+            [
+                TestRunner(options).get_iter,
+                ResultPrinter(verbose=options.verbose).get_iter,
+                ResultSummary().get_iter,
+
+                # mirror results and summary to a report file
+                ResultPrinter(report, verbose=options.verbose).get_iter,
+                ResultSummary(report).get_iter,
+            ])
+
+        if options.maxtime > 0:
+            pipeline.append(TimeFilter(options.maxtime).get_iter)
+
+        run_pipeline(tests, pipeline)
 
 
 if __name__ == '__main__':

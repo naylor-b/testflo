@@ -60,9 +60,10 @@ class ResultPrinter(object):
     def _print_result(self, result):
         stream = self.stream
         if self.verbose:
-            stream.write("%s ... %s (%s)\n" % (result.testspec,
-                                               result.status,
-                                               elapsed_str(result.elapsed())))
+            stream.write("%s ... %s (%s)\n%s\n" % (result.testspec,
+                                                   result.status,
+                                                   elapsed_str(result.elapsed()),
+                                                   result.err_msg))
         elif result.status == 'OK':
             stream.write('.')
         elif result.status == 'FAIL':
@@ -72,12 +73,10 @@ class ResultPrinter(object):
 
         if result.err_msg and result.status == 'FAIL':
             if not self.verbose:
-                stream.write("\n%s ... %s (%s)\n" % (result.testspec,
-                                                     result.status,
-                                                     elapsed_str(result.elapsed())))
-            stream.write(result.err_msg)
-            stream.write('\n')
-
+                stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
+                                                         result.status,
+                                                         elapsed_str(result.elapsed()),
+                                                         result.err_msg))
         stream.flush()
 
 
@@ -96,7 +95,6 @@ class ResultSummary(object):
 
         oks = 0
         total = 0
-        total_time = 0.
         fails = []
         skips = []
 
@@ -104,7 +102,6 @@ class ResultSummary(object):
 
         for test in input_iter:
             total += 1
-            total_time += test.elapsed()
 
             if test.status == 'OK':
                 oks += 1
@@ -136,4 +133,3 @@ class ResultSummary(object):
         s = "s" if total > 1 else ""
         write("\n\nRan %d test%s  (elapsed time: %s)\n\n" %
                           (total, s, elapsed_str(wallclock)))
-
