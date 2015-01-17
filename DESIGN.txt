@@ -8,7 +8,7 @@ an input iterator as an argument and returns an output iterator.  The
 source of the pipeline is allowed to be a plain python iterator
 since it doesn't need an input iterator.
 
-The pipeline starts with a list of strings that I'll call 
+The pipeline starts with an iterator of strings that I'll call 
 'general test specifiers'.  These can have any of the following forms:
 
 <module or file path>
@@ -36,6 +36,6 @@ The multiprocessing library is used in the TestRunner to support concurrent
 execution of tests.  It adds test specifiers to a shared Queue that the 
 worker processes pull from. Then the workers place TestResult objects in 
 a 'done' Queue that the TestRunner pulls from and passes downstream for 
-display, summary, or whatever.
+display, summary, or whatever. 
 
 

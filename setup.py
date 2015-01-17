@@ -9,7 +9,7 @@ setup(name='testflo',
       package_dir={'': 'src'},
       entry_points = {
           "console_scripts": [
-                "testflo=testflo.testflo:main",
+                "testflo=testflo.main:main",
               ],
       }
       )

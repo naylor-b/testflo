@@ -3,18 +3,13 @@ Misc. file utility routines.
 """
 
 import os
-import stat
 import sys
-import shutil
-import warnings
 import itertools
-import string
 import ConfigParser
 
 from fnmatch import fnmatch
-from os.path import isdir, join, dirname, basename, exists, isfile, \
-                    abspath, expanduser, expandvars, \
-                    split, splitext
+from os.path import join, dirname, basename, isfile, \
+                    abspath, split, splitext
 
 
 def _file_gen(dname, fmatch=bool, dmatch=None):
@@ -42,36 +37,8 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
             yield join(path, name)
 
 
-def _file_dir_gen(dname, fmatch=bool, dmatch=None):
-    """A generator returning files and directories under
-    the given directory, with optional file and directory filtering..
-
-    fmatch: predicate funct
-        A predicate function that returns True on a match.
-        This is used to match files only.
-
-    dmatch: predicate funct
-        A predicate function that returns True on a match.
-        This is used to match directories only.
-    """
-    if dmatch is not None and not dmatch(dname):
-        return
-
-    for path, dirlist, filelist in os.walk(dname):
-        if dmatch is not None: # prune directories to search
-            newdl = [d for d in dirlist if dmatch(d)]
-            if len(newdl) != len(dirlist):
-                dirlist[:] = newdl # replace contents of dirlist to cause pruning
-
-        for name in [f for f in filelist if fmatch(f)]:
-            yield join(path, name)
-
-        for name in dirlist:
-            yield join(path, name)
-
-
 def find_files(start, match=None, exclude=None,
-               showdirs=False, dirmatch=None, direxclude=None):
+               dirmatch=None, direxclude=None):
     """Return filenames (using a generator).
 
     start: str or list of str
@@ -86,9 +53,6 @@ def find_files(start, match=None, exclude=None,
         Either a string containing a glob pattern to exclude
         or a predicate function that returns True to exclude.
         This is used to exclude files only.
-
-    showdirs: bool
-        If True, return names of files AND directories.
 
     dirmatch: str or predicate funct
         Either a string containing a glob pattern to match
@@ -108,7 +72,6 @@ def find_files(start, match=None, exclude=None,
     if len(startdirs) == 0:
         return iter([])
 
-    gen = _file_dir_gen if showdirs else _file_gen
     if match is None:
         matcher = bool
     elif isinstance(match, basestring):
@@ -131,13 +94,16 @@ def find_files(start, match=None, exclude=None,
         fmatch = matcher
 
     if isinstance(direxclude, basestring):
-        dmatch = lambda name: dmatcher(name) and not fnmatch(name, direxclude)
+        if dmatcher is bool:
+            dmatch = lambda name: not fnmatch(name, direxclude)
+        else:
+            dmatch = lambda name: dmatcher(name) and not fnmatch(name, direxclude)
     elif direxclude is not None:
         dmatch = lambda name: dmatcher(name) and not direxclude(name)
     else:
         dmatch = dmatcher
 
-    iters = [gen(d, fmatch=fmatch, dmatch=dmatch) for d in startdirs]
+    iters = [_file_gen(d, fmatch=fmatch, dmatch=dmatch) for d in startdirs]
     if len(iters) > 1:
         return itertools.chain(*iters)
     else:
@@ -159,25 +125,19 @@ def get_module_path(fpath):
     return '.'.join(pnames[::-1])
 
 
-def find_module(name, path=None, py=True):
+def find_module(name):
     """Return the pathname of the Python file corresponding to the
-    given module name, or None if it can't be found. If path is set, search in
-    path for the file; otherwise, search in sys.path. If py is True, the
+    given module name, or None if it can't be found. The
     file must be an uncompiled Python (.py) file.
     """
-    if path is None:
-        path = sys.path
+
     nameparts = name.split('.')
 
     endings = [join(*nameparts)]
     endings.append(join(endings[0], '__init__.py'))
     endings[0] += '.py'
-    if not py:
-        endings.append(endings[0]+'c')
-        endings.append(endings[0]+'o')
-        endings.append(endings[0]+'d')
 
-    for entry in path:
+    for entry in sys.path:
         for ending in endings:
             f = join(entry, ending)
             if isfile(f):
@@ -225,3 +185,5 @@ def read_config_file(cfgfile, options):
     if config.has_option('testflo', 'skip_dirs'):
         skips = config.get('testflo', 'skip_dirs')
         options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
+
+
