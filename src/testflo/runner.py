@@ -33,7 +33,7 @@ def parse_test_path(testspec):
     testcase = method = None
     parts = testspec.split(':')
     if len(parts) > 1 and parts[1].startswith('\\'):  # windows abs path
-        module = ':'.join(parts[:1])
+        module = ':'.join(parts[:2])
         if len(parts) == 3:
             rest = parts[2]
         else:
