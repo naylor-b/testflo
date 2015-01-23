@@ -68,7 +68,7 @@ class ResultPrinter(object):
         elif result.status == 'SKIP':
             stream.write('S')
 
-        if not self.verbose and result.err_msg and result.status == 'FAIL':
+        if not self.verbose and result.err_msg and result.status in ('FAIL', 'SKIP'):
             stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
                                                      result.status,
                                                      elapsed_str(result.elapsed()),
