@@ -8,8 +8,8 @@ import unittest
 from fnmatch import fnmatch
 from os.path import basename, dirname, isdir
 
-from testflo.fileutil import find_files, get_module
-from testflo.runner import get_testcase
+from .fileutil import find_files, get_module
+from .runner import get_testcase
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants

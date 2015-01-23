@@ -22,12 +22,12 @@ from fnmatch import fnmatch
 from argparse import ArgumentParser
 from multiprocessing import cpu_count
 
-from testflo.runner import TestRunner
-from testflo.result import ResultPrinter, ResultSummary
-from testflo.discover import TestDiscoverer, dryrun
-from testflo.timefilt import TimeFilter
+from .runner import TestRunner
+from .result import ResultPrinter, ResultSummary
+from .discover import TestDiscoverer, dryrun
+from .timefilt import TimeFilter
 
-from testflo.fileutil import read_config_file, read_test_file
+from .fileutil import read_config_file, read_test_file
 
 
 def _get_parser():

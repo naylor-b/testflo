@@ -9,9 +9,9 @@ from cStringIO import StringIO
 from types import FunctionType, MethodType
 from multiprocessing import Queue, Process
 
-from testflo.fileutil import get_module
-from testflo.result import TestResult
-from testflo.devnull import DevNull
+from .fileutil import get_module
+from .result import TestResult
+from .devnull import DevNull
 
 
 def parse_test_path(testspec):
