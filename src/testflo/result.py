@@ -36,6 +36,9 @@ class TestResult(object):
         fname = os.path.basename(parts[0])
         return ':'.join((fname, parts[1]))
 
+    def __str__(self):
+        return "%s: %s\n%s" % (self.testspec, self.status, self.err_msg)
+
 
 class ResultPrinter(object):
     """Prints the status and error message (if any) of each TestResult object
@@ -57,10 +60,12 @@ class ResultPrinter(object):
     def _print_result(self, result):
         stream = self.stream
         if self.verbose:
-            stream.write("%s ... %s (%s)\n%s\n" % (result.testspec,
+            stream.write("%s ... %s (%s)\n%s" % (result.testspec,
                                                    result.status,
                                                    elapsed_str(result.elapsed()),
                                                    result.err_msg))
+            if result.err_msg:
+                stream.write("\n")
         elif result.status == 'OK':
             stream.write('.')
         elif result.status == 'FAIL':
@@ -77,7 +82,7 @@ class ResultPrinter(object):
             elif result.status == 'SKIP':
                 stream.write("\n%s: SKIP: %s\n" % (result.short_name(),
                                                    result.err_msg))
-                
+
         stream.flush()
 
 

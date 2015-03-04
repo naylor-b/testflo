@@ -1,6 +1,9 @@
 from __future__ import print_function
 
 class TimeFilter(object):
+    """This iterator saves only tests that complete successfully
+    in max_time or less.
+    """
     def __init__(self, max_time, outfile='quicktests.in'):
         self.outfile = outfile
         self.max_time = max_time

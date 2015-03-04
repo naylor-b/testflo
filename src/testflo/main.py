@@ -22,7 +22,7 @@ from fnmatch import fnmatch
 from argparse import ArgumentParser
 from multiprocessing import cpu_count
 
-from .runner import TestRunner
+from .runner import TestRunner, IsolatedTestRunner
 from .result import ResultPrinter, ResultSummary
 from .discover import TestDiscoverer, dryrun
 from .timefilt import TimeFilter
@@ -34,7 +34,7 @@ def _get_parser():
     """Returns a parser to handle command line args."""
 
     parser = ArgumentParser()
-    parser.usage = "testease [options]"
+    parser.usage = "testflo [options]"
     parser.add_argument('-c', '--config', action='store', dest='cfg',
                         metavar='CONFIG',
                         help='Path of config file where preferences are specified.')
@@ -59,6 +59,8 @@ def _get_parser():
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="if true, don't actually run tests, but report"
                           "which tests would have been run")
+    parser.add_argument('--isolated', action='store_true', dest='isolated',
+                        help="if true, run each test in a separate subprocess")
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
                         help="if true, stop after the first test failure")
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
@@ -131,9 +133,19 @@ skip_dirs=site-packages,
                 ]
             )
         else:
+            if options.isolated:
+                try:
+                    import mpi4py
+                except ImportError:
+                    pipeline.append(IsolatedTestRunner(options).get_iter)
+                else:
+                    from .mpi import IsolatedMPITestRunner
+                    pipeline.append(IsolatedMPITestRunner(options).get_iter)
+            else:
+                pipeline.append(TestRunner(options).get_iter)
+
             pipeline.extend(
             [
-                TestRunner(options).get_iter,
                 ResultPrinter(verbose=options.verbose).get_iter,
                 ResultSummary().get_iter,
 

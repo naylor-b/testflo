@@ -109,39 +109,11 @@ def worker(runner, test_queue, done_queue):
             done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
                            traceback.format_exc()))
 
-
-class TestRunner(object):
-    """TestRunner that uses the multiprocessing package
-    to execute tests concurrently.
-    """
-
+class TestRunnerBase(object):
     def __init__(self, options):
-        self.num_procs = options.num_procs
         self.nocap_stdout = options.nocapture
         self.get_iter = self.run_tests
         self.stop = options.stop
-
-        # only do multiprocessing stuff if num_procs > 1
-        if self.num_procs > 1:
-            self.get_iter = self.run_concurrent_tests
-
-            options.num_procs = 1  # worker only uses 1 process
-
-            # use this test runner in the concurrent workers
-            worker_runner = TestRunner(options)
-
-            # Create queues
-            self.task_queue = Queue()
-            self.done_queue = Queue()
-
-            self.procs = []
-
-            # Start worker processes
-            for i in range(self.num_procs):
-                self.procs.append(Process(target=worker,
-                        args=(worker_runner, self.task_queue, self.done_queue)))
-            for proc in self.procs:
-                proc.start()
 
     def run_tests(self, input_iter):
         """Run tests serially."""
@@ -152,38 +124,12 @@ class TestRunner(object):
             if self.stop and result.status == 'FAIL':
                 break
 
-    def run_concurrent_tests(self, input_iter):
-        """Run test concurrently."""
-
-        it = iter(input_iter)
-        numtests = 0
-        try:
-            for proc in self.procs:
-                self.task_queue.put(it.next())
-                numtests += 1
-        except StopIteration:
-            pass
+    def get_test_parent(self, mod, testcase_class, method):
+        """Return the parent object that contains the test"""
+        if testcase_class:
+            return testcase_class(methodName=method.__name__)
         else:
-            try:
-                while numtests:
-                    result = self.done_queue.get()
-                    yield result
-                    numtests -= 1
-                    if self.stop and result.status == 'FAIL':
-                        break
-                    self.task_queue.put(it.next())
-                    numtests += 1
-            except StopIteration:
-                pass
-
-        for proc in self.procs:
-            self.task_queue.put('STOP')
-
-        for i in range(numtests):
-            yield self.done_queue.get()
-
-        for proc in self.procs:
-            proc.join()
+            return mod
 
     def run_test(self, test):
         """Runs the test indicated by the given 'specific' testspec, which
@@ -201,11 +147,7 @@ class TestRunner(object):
             return TestResult(test, start_time, time.time(), 'FAIL',
                               'ERROR: test method not specified.')
 
-        if testcase:
-            testcase = testcase(methodName=method.__name__)
-            parent = testcase
-        else:
-            parent = mod
+        parent = self.get_test_parent(mod, testcase, method)
 
         if self.nocap_stdout:
             outstream = sys.stdout
@@ -248,3 +190,110 @@ class TestRunner(object):
             sys.stdout = old_out
 
         return result
+
+
+class IsolatedTestRunner(TestRunnerBase):
+    """TestRunner that runs each test in a separate process."""
+
+    def __init__(self, options):
+        super(IsolatedTestRunner, self).__init__(options)
+        self.get_iter = self.run_isolated_tests
+        self.options = options
+
+        # Create queues
+        self.task_queue = Queue()
+        self.done_queue = Queue()
+
+    def get_process(self, testspec):
+        # Start worker process
+        return Process(target=worker,
+                       args=(TestRunner(self.options),
+                             self.task_queue,
+                             self.done_queue))
+
+    def get_result(self):
+        return self.done_queue.get()
+
+    def run_isolated_tests(self, input_iter):
+        """Run test concurrently."""
+
+        # use this test runner in the subprocesses
+        self.options.isolated = False
+        self.options.num_procs = 1
+
+        for testspec in input_iter:
+            self.task_queue.put(testspec)
+            proc = self.get_process(testspec)
+            proc.start()
+
+            result = self.get_result()
+            self.task_queue.put('STOP')
+
+            proc.join()
+
+            yield result
+
+
+class TestRunner(TestRunnerBase):
+    """TestRunner that uses the multiprocessing package
+    to execute tests concurrently.
+    """
+
+    def __init__(self, options):
+        super(TestRunner, self).__init__(options)
+        self.num_procs = options.num_procs
+
+        # only do concurrent stuff if num_procs > 1
+        if self.num_procs > 1:
+            self.get_iter = self.run_concurrent_tests
+
+            options.num_procs = 1  # worker only uses 1 process
+
+            # use this test runner in the concurrent workers
+            worker_runner = TestRunner(options)
+
+            # Create queues
+            self.task_queue = Queue()
+            self.done_queue = Queue()
+
+            self.procs = []
+
+            # Start worker processes
+            for i in range(self.num_procs):
+                self.procs.append(Process(target=worker,
+                        args=(worker_runner, self.task_queue, self.done_queue)))
+            for proc in self.procs:
+                proc.start()
+
+    def run_concurrent_tests(self, input_iter):
+        """Run test concurrently."""
+
+        it = iter(input_iter)
+        numtests = 0
+        try:
+            for proc in self.procs:
+                self.task_queue.put(it.next())
+                numtests += 1
+        except StopIteration:
+            pass
+        else:
+            try:
+                while numtests:
+                    result = self.done_queue.get()
+                    yield result
+                    numtests -= 1
+                    if self.stop and result.status == 'FAIL':
+                        break
+                    self.task_queue.put(it.next())
+                    numtests += 1
+            except StopIteration:
+                pass
+
+        for proc in self.procs:
+            self.task_queue.put('STOP')
+
+        for i in range(numtests):
+            yield self.done_queue.get()
+
+        for proc in self.procs:
+            proc.join()
