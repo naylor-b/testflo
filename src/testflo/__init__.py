@@ -4,3 +4,4 @@ from . import devnull
 from . import timefilt
 from . import runner
 from . import discover
+from . import main

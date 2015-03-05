@@ -62,7 +62,7 @@ def parse_test_path(testspec):
 
 def get_testcase(filename, mod, tcasename):
     """Given a module and the name of a TestCase
-    class, return a TestCase object or raise an exception.
+    class, return a TestCase class object or raise an exception.
     """
 
     try:
@@ -109,13 +109,12 @@ def worker(runner, test_queue, done_queue):
             done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
                            traceback.format_exc()))
 
-class TestRunnerBase(object):
+class TestRunner(object):
     def __init__(self, options):
         self.nocap_stdout = options.nocapture
-        self.get_iter = self.run_tests
         self.stop = options.stop
 
-    def run_tests(self, input_iter):
+    def get_iter(self, input_iter):
         """Run tests serially."""
 
         for test in input_iter:
@@ -192,7 +191,7 @@ class TestRunnerBase(object):
         return result
 
 
-class IsolatedTestRunner(TestRunnerBase):
+class IsolatedTestRunner(TestRunner):
     """TestRunner that runs each test in a separate process."""
 
     def __init__(self, options):
@@ -231,20 +230,18 @@ class IsolatedTestRunner(TestRunnerBase):
             yield result
 
 
-class TestRunner(TestRunnerBase):
+class ConcurrentTestRunner(TestRunner):
     """TestRunner that uses the multiprocessing package
     to execute tests concurrently.
     """
 
     def __init__(self, options):
-        super(TestRunner, self).__init__(options)
+        super(ConcurrentTestRunner, self).__init__(options)
         self.num_procs = options.num_procs
 
         # only do concurrent stuff if num_procs > 1
         if self.num_procs > 1:
             self.get_iter = self.run_concurrent_tests
-
-            options.num_procs = 1  # worker only uses 1 process
 
             # use this test runner in the concurrent workers
             worker_runner = TestRunner(options)

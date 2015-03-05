@@ -22,7 +22,7 @@ from fnmatch import fnmatch
 from argparse import ArgumentParser
 from multiprocessing import cpu_count
 
-from .runner import TestRunner, IsolatedTestRunner
+from .runner import ConcurrentTestRunner, IsolatedTestRunner
 from .result import ResultPrinter, ResultSummary
 from .discover import TestDiscoverer, dryrun
 from .timefilt import TimeFilter
@@ -54,20 +54,21 @@ def _get_parser():
                         metavar='OUTFILE', default='test_report.out',
                         help='Name of test report file')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='if true, include testspec and elapsed time in '
+                        help='If true, include testspec and elapsed time in '
                              'screen output')
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
-                        help="if true, don't actually run tests, but report"
+                        help="If true, don't actually run tests, but report"
                           "which tests would have been run")
-    parser.add_argument('--isolated', action='store_true', dest='isolated',
-                        help="if true, run each test in a separate subprocess")
+    parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
+                        help="If true, run each test in a separate subprocess."
+                             " This is required to run MPI tests.")
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
-                        help="if true, stop after the first test failure")
+                        help="If true, stop after the first test failure")
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
-                        help="if true, stdout will not be captured and will be"
+                        help="If true, stdout will not be captured and will be"
                              " written to the screen immediately")
     parser.add_argument('tests', metavar='test', nargs='*',
-                       help='a test method/case/module/directory to run')
+                       help='A test method/case/module/directory to run')
 
     return parser
 
@@ -87,8 +88,8 @@ def run_pipeline(source, pipe):
     for result in iters[-1]:
         pass
 
-def main():
-    options = _get_parser().parse_args()
+def main(args=None):
+    options = _get_parser().parse_args(args)
 
     options.skip_dirs = []
 
@@ -142,7 +143,7 @@ skip_dirs=site-packages,
                     from .mpi import IsolatedMPITestRunner
                     pipeline.append(IsolatedMPITestRunner(options).get_iter)
             else:
-                pipeline.append(TestRunner(options).get_iter)
+                pipeline.append(ConcurrentTestRunner(options).get_iter)
 
             pipeline.extend(
             [
@@ -159,6 +160,13 @@ skip_dirs=site-packages,
 
         run_pipeline(tests, pipeline)
 
+def run_tests(args=None):
+    """This can be executed from within an "if __name__ == '__main__'" block
+    to execute the tests found in that module.
+    """
+    if args is None:
+        args = []
+    main(list(args) + [__import__('__main__').__file__])
 
 if __name__ == '__main__':
     main()
