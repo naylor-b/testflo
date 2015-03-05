@@ -211,9 +211,6 @@ class IsolatedTestRunner(TestRunnerBase):
                              self.task_queue,
                              self.done_queue))
 
-    def get_result(self):
-        return self.done_queue.get()
-
     def run_isolated_tests(self, input_iter):
         """Run test concurrently."""
 
@@ -226,7 +223,7 @@ class IsolatedTestRunner(TestRunnerBase):
             proc = self.get_process(testspec)
             proc.start()
 
-            result = self.get_result()
+            result = self.done_queue.get()
             self.task_queue.put('STOP')
 
             proc.join()
