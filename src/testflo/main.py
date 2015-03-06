@@ -141,7 +141,7 @@ skip_dirs=site-packages,
                 except ImportError:
                     pipeline.append(IsolatedTestRunner(options).get_iter)
                 else:
-                    from .mpi import IsolatedMPITestRunner
+                    from testflo.mpi import IsolatedMPITestRunner
                     pipeline.append(IsolatedMPITestRunner(options).get_iter)
             else:
                 pipeline.append(ConcurrentTestRunner(options).get_iter)
