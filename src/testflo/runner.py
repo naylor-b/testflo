@@ -9,9 +9,9 @@ from cStringIO import StringIO
 from types import FunctionType, MethodType
 from multiprocessing import Queue, Process
 
-from .fileutil import get_module
-from .result import TestResult
-from .devnull import DevNull
+from testflo.fileutil import get_module
+from testflo.result import TestResult
+from testflo.devnull import DevNull
 
 
 def parse_test_path(testspec):
@@ -91,6 +91,10 @@ def try_call(method):
         else:
             status = 'FAIL'
             sys.stderr.write(msg)
+    except:
+        msg = traceback.format_exc()
+        status = 'FAIL'
+        sys.stderr.write(msg)
 
     return status
 

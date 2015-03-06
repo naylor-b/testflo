@@ -18,16 +18,17 @@ that takes an input iterator and returns an output iterator.
 import os
 import time
 
-from fnmatch import fnmatch
 from argparse import ArgumentParser
+
+from fnmatch import fnmatch
 from multiprocessing import cpu_count
 
-from .runner import ConcurrentTestRunner, IsolatedTestRunner
-from .result import ResultPrinter, ResultSummary
-from .discover import TestDiscoverer, dryrun
-from .timefilt import TimeFilter
+from testflo.runner import ConcurrentTestRunner, IsolatedTestRunner
+from testflo.result import ResultPrinter, ResultSummary
+from testflo.discover import TestDiscoverer, dryrun
+from testflo.timefilt import TimeFilter
 
-from .fileutil import read_config_file, read_test_file
+from testflo.fileutil import read_config_file, read_test_file
 
 
 def _get_parser():
