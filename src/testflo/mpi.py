@@ -13,11 +13,11 @@ from mpi4py import MPI
 from testflo.runner import TestRunner, IsolatedTestRunner, parse_test_path
 from testflo.result import TestResult
 
-# exit_codes = {
-#     'OK': 0,
-#     'SKIP': 42,
-#     'FAIL': 43,
-# }
+exit_codes = {
+    'OK': 0,
+    'SKIP': 42,
+    'FAIL': 43,
+}
 
 
 def mpi_worker(nprocs, test_queue, done_queue, options):
@@ -25,9 +25,9 @@ def mpi_worker(nprocs, test_queue, done_queue, options):
     off of the test_queue, runs it using mpirun in a subprocess,
     then puts the TestResult object on the done_queue.
     """
-    comm = None
+
     for testspec in iter(test_queue.get, 'STOP'):
-        fout = ferr = None
+        ferr = None
         try:
             start = time.time()
             ferr = TemporaryFile(mode='w+t')
@@ -40,28 +40,17 @@ def mpi_worker(nprocs, test_queue, done_queue, options):
             p.wait()
             end = time.time()
 
-            ferr.seek(0)
-            errs = ferr.read().strip()
-
-            if p.returncode:
-                status = 'FAIL'
-            elif errs:
-                if 'SkipTest' in errs:
-                    status = 'SKIP'
-                else:
-                    status = 'FAIL'
+            for status, val in exit_codes.items():
+                if val == p.returncode:
+                    break
             else:
-                status = 'OK'
+                status = 'FAIL'
 
-            # for status, val in exit_codes.items():
-            #     if val == p.returncode:
-            #         break
-            # else:
-            #     status = 'FAIL'
+            ferr.seek(0)
 
             result = TestResult(testspec, start, end,
                                 status,
-                                errs)
+                                ferr.read())
 
             done_queue.put(result)
         except:
