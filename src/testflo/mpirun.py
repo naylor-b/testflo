@@ -1,6 +1,8 @@
 
 """
 This is meant to be executed using mpirun.
+
+NOTE: Currently some tests run using this hang mysteriously.
 """
 
 if __name__ == '__main__':
@@ -10,9 +12,8 @@ if __name__ == '__main__':
 
     from mpi4py import MPI
     from testflo.main import _get_parser
-    from testflo.runner import TestRunner
+    from testflo.runner import TestRunner, exit_codes
     from testflo.result import TestResult
-    from testflo.mpi import exit_codes
 
     exitcode = 0 # use 0 for exit code of all ranks != 0 because otherwise,
                  # MPI will terminate other processes
@@ -40,7 +41,6 @@ if __name__ == '__main__':
         exc = sys.exc_info()
         sys.stderr.write(traceback.format_exc())
         exitcode = exit_codes['FAIL']
-        #raise exc[0], exc[1], exc[2]
 
     finally:
         sys.stdout.flush()
