@@ -37,7 +37,10 @@ class TestResult(object):
         return ':'.join((fname, parts[1]))
 
     def __str__(self):
-        return "%s: %s\n%s" % (self.testspec, self.status, self.err_msg)
+        if self.err_msg:
+            return "%s: %s\n%s" % (self.testspec, self.status, self.err_msg)
+        else:
+            return "%s: %s" % (self.testspec, self.status)
 
 
 class ResultPrinter(object):
