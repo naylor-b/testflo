@@ -91,7 +91,7 @@ def run_pipeline(source, pipe):
     # iterate over the last iter in the pipline and we're done
     for result in iters[-1]:
         if result.status == 'FAIL':
-            self.return_code = 1
+            return_code = 1
 
     return return_code
 
