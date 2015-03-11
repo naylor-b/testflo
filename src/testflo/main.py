@@ -16,6 +16,7 @@ that takes an input iterator and returns an output iterator.
 """
 
 import os
+import sys
 import time
 
 from argparse import ArgumentParser
@@ -85,9 +86,14 @@ def run_pipeline(source, pipe):
     for i,p in enumerate(pipe):
         iters.append(p(iters[i]))
 
+    return_code = 0
+
     # iterate over the last iter in the pipline and we're done
     for result in iters[-1]:
-        pass
+        if result.status == 'FAIL':
+            self.return_code = 1
+
+    return return_code
 
 def main(args=None):
     options = _get_parser().parse_args(args)
@@ -159,7 +165,8 @@ skip_dirs=site-packages,
         if options.maxtime > 0:
             pipeline.append(TimeFilter(options.maxtime).get_iter)
 
-        run_pipeline(tests, pipeline)
+        return run_pipeline(tests, pipeline)
+
 
 def run_tests(args=None):
     """This can be executed from within an "if __name__ == '__main__'" block
@@ -167,9 +174,8 @@ def run_tests(args=None):
     """
     if args is None:
         args = []
-    main(list(args) + [__import__('__main__').__file__])
-
+    sys.exit(main(list(args) + [__import__('__main__').__file__]))
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
