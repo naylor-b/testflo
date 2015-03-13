@@ -7,10 +7,56 @@ import sys
 import itertools
 import ConfigParser
 
+from multiprocessing import cpu_count
+
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile, \
                     abspath, split, splitext
 
+from argparse import ArgumentParser
+
+
+def _get_parser():
+    """Returns a parser to handle command line args."""
+
+    parser = ArgumentParser()
+    parser.usage = "testflo [options]"
+    parser.add_argument('-c', '--config', action='store', dest='cfg',
+                        metavar='CONFIG',
+                        help='Path of config file where preferences are specified.')
+    parser.add_argument('-t', '--testfile', action='store', dest='testfile',
+                        metavar='TESTFILE',
+                        help='Path to a file containing one testspec per line.')
+    parser.add_argument('--maxtime', action='store', dest='maxtime',
+                        metavar='TIME_LIMIT', default=-1, type=float,
+                        help='Specifies a time limit for tests to be saved to '
+                             'the quicktests.in file.')
+    parser.add_argument('-n', '--numprocs', type=int, action='store',
+                        dest='num_procs', metavar='NUM_PROCS', default=cpu_count(),
+                        help='Number of processes to run. By default, this will '
+                             'use the number of CPUs available.  To force serial'
+                             ' execution, specify a value of 1.')
+    parser.add_argument('-o', '--outfile', action='store', dest='outfile',
+                        metavar='OUTFILE', default='test_report.out',
+                        help='Name of test report file')
+    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
+                        help='If true, include testspec and elapsed time in '
+                             'screen output')
+    parser.add_argument('--dryrun', action='store_true', dest='dryrun',
+                        help="If true, don't actually run tests, but report"
+                          "which tests would have been run")
+    parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
+                        help="If true, run each test in a separate subprocess."
+                             " This is required to run MPI tests.")
+    parser.add_argument('-x', '--stop', action='store_true', dest='stop',
+                        help="If true, stop after the first test failure")
+    parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
+                        help="If true, stdout will not be captured and will be"
+                             " written to the screen immediately")
+    parser.add_argument('tests', metavar='test', nargs='*',
+                       help='A test method/case/module/directory to run')
+
+    return parser
 
 def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
@@ -185,5 +231,3 @@ def read_config_file(cfgfile, options):
     if config.has_option('testflo', 'skip_dirs'):
         skips = config.get('testflo', 'skip_dirs')
         options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
-
-

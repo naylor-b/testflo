@@ -19,60 +19,16 @@ import os
 import sys
 import time
 
-from argparse import ArgumentParser
-
 from fnmatch import fnmatch
-from multiprocessing import cpu_count
 
-from testflo.runner import ConcurrentTestRunner, IsolatedTestRunner
+from testflo.runner import ConcurrentTestRunner
+from testflo.isolated import IsolatedTestRunner
 from testflo.result import ResultPrinter, ResultSummary
 from testflo.discover import TestDiscoverer, dryrun
 from testflo.timefilt import TimeFilter
 
-from testflo.fileutil import read_config_file, read_test_file
+from testflo.util import read_config_file, read_test_file, _get_parser
 
-
-def _get_parser():
-    """Returns a parser to handle command line args."""
-
-    parser = ArgumentParser()
-    parser.usage = "testflo [options]"
-    parser.add_argument('-c', '--config', action='store', dest='cfg',
-                        metavar='CONFIG',
-                        help='Path of config file where preferences are specified.')
-    parser.add_argument('-t', '--testfile', action='store', dest='testfile',
-                        metavar='TESTFILE',
-                        help='Path to a file containing one testspec per line.')
-    parser.add_argument('--maxtime', action='store', dest='maxtime',
-                        metavar='TIME_LIMIT', default=-1, type=float,
-                        help='Specifies a time limit for tests to be saved to '
-                             'the quicktests.in file.')
-    parser.add_argument('-n', '--numprocs', type=int, action='store',
-                        dest='num_procs', metavar='NUM_PROCS', default=cpu_count(),
-                        help='Number of processes to run. By default, this will '
-                             'use the number of CPUs available.  To force serial'
-                             ' execution, specify a value of 1.')
-    parser.add_argument('-o', '--outfile', action='store', dest='outfile',
-                        metavar='OUTFILE', default='test_report.out',
-                        help='Name of test report file')
-    parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='If true, include testspec and elapsed time in '
-                             'screen output')
-    parser.add_argument('--dryrun', action='store_true', dest='dryrun',
-                        help="If true, don't actually run tests, but report"
-                          "which tests would have been run")
-    parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
-                        help="If true, run each test in a separate subprocess."
-                             " This is required to run MPI tests.")
-    parser.add_argument('-x', '--stop', action='store_true', dest='stop',
-                        help="If true, stop after the first test failure")
-    parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
-                        help="If true, stdout will not be captured and will be"
-                             " written to the screen immediately")
-    parser.add_argument('tests', metavar='test', nargs='*',
-                       help='A test method/case/module/directory to run')
-
-    return parser
 
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
@@ -96,6 +52,9 @@ def run_pipeline(source, pipe):
     return return_code
 
 def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+
     options = _get_parser().parse_args(args)
 
     options.skip_dirs = []
@@ -145,10 +104,10 @@ skip_dirs=site-packages,
                 try:
                     import mpi4py
                 except ImportError:
-                    pipeline.append(IsolatedTestRunner(options).get_iter)
+                    pipeline.append(IsolatedTestRunner(options, args).get_iter)
                 else:
                     from testflo.mpi import IsolatedMPITestRunner
-                    pipeline.append(IsolatedMPITestRunner(options).get_iter)
+                    pipeline.append(IsolatedMPITestRunner(options, args).get_iter)
             else:
                 pipeline.append(ConcurrentTestRunner(options).get_iter)
 

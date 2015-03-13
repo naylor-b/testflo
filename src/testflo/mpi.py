@@ -9,8 +9,9 @@ from tempfile import TemporaryFile
 from mpi4py import MPI
 
 
-from testflo.runner import TestRunner, IsolatedTestRunner, parse_test_path, \
-                           run_isolated, exit_codes
+from testflo.runner import TestRunner, parse_test_path, \
+                           exit_codes
+from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.result import TestResult
 
 def under_mpirun():
@@ -23,7 +24,7 @@ def under_mpirun():
             return True
     return False
 
-def run_mpi(testspec, nprocs):
+def run_mpi(testspec, nprocs, args):
     """This runs the test using mpirun in a subprocess,
     then returns the TestResult object.
     """
@@ -37,6 +38,7 @@ def run_mpi(testspec, nprocs):
                          sys.executable,
                          os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                          testspec)
+        cmd = ' '.join([cmd]+args)
         p = subprocess.Popen(cmd, stderr=ferr, shell=True)
         p.wait()
         end = time.time()
@@ -76,6 +78,6 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
             fname, mod, testcase, method = parse_test_path(testspec)
             self.testcase = testcase
             if testcase and hasattr(testcase, 'N_PROCS'):
-                yield run_mpi(testspec, testcase.N_PROCS)
+                yield run_mpi(testspec, testcase.N_PROCS, self.args)
             else:
-                yield run_isolated(testspec)
+                yield run_isolated(testspec, self.args)

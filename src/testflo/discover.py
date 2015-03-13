@@ -8,7 +8,7 @@ import unittest
 from fnmatch import fnmatch
 from os.path import basename, dirname, isdir
 
-from testflo.fileutil import find_files, get_module
+from testflo.util import find_files, get_module
 from testflo.runner import get_testcase
 
 def dryrun(input_iter):
