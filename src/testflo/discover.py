@@ -11,15 +11,6 @@ from os.path import basename, dirname, isdir
 from testflo.util import find_files, get_module
 from testflo.runner import get_testcase
 
-def dryrun(input_iter):
-    """Iterator added to the pipeline when user only wants
-    a dry run, listing all of the discovered tests but not
-    actually running them.
-    """
-    for spec in input_iter:
-        print spec
-        yield spec
-
 class TestDiscoverer(object):
 
     def __init__(self, module_pattern='test*.py',

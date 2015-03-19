@@ -23,12 +23,21 @@ from fnmatch import fnmatch
 
 from testflo.runner import ConcurrentTestRunner
 from testflo.isolated import IsolatedTestRunner
-from testflo.result import ResultPrinter, ResultSummary
-from testflo.discover import TestDiscoverer, dryrun
+from testflo.result import ResultPrinter, ResultSummary, TestResult
+from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
 from testflo.util import read_config_file, read_test_file, _get_parser
 
+
+def dryrun(input_iter):
+    """Iterator added to the pipeline when user only wants
+    a dry run, listing all of the discovered tests but not
+    actually running them.
+    """
+    for spec in input_iter:
+        print spec
+        yield TestResult(spec, 0, 0)
 
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
