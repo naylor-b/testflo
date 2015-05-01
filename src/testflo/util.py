@@ -6,8 +6,13 @@ import os
 import sys
 import itertools
 import ConfigParser
+import warnings
 
-from multiprocessing import cpu_count
+try:
+    from multiprocessing import cpu_count
+except ImportError:
+    def cpu_count():
+        return 1
 
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile, \
@@ -31,8 +36,15 @@ def _get_parser():
                         metavar='TIME_LIMIT', default=-1, type=float,
                         help='Specifies a time limit for tests to be saved to '
                              'the quicktests.in file.')
+
+    try:
+        cpus = cpu_count()
+    except:
+        warnings.warn('CPU count could not be determined. Defaulting to 1')
+        cpus = 1
+
     parser.add_argument('-n', '--numprocs', type=int, action='store',
-                        dest='num_procs', metavar='NUM_PROCS', default=cpu_count(),
+                        dest='num_procs', metavar='NUM_PROCS', default=cpus,
                         help='Number of processes to run. By default, this will '
                              'use the number of CPUs available.  To force serial'
                              ' execution, specify a value of 1.')
