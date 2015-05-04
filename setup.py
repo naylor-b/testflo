@@ -1,18 +1,16 @@
 
-from setuptools import setup
+from distutils.core import setup
 
 setup(name='testflo',
-      version='0.1',
+      version='0.9',
+      description="A simple flow based testing framework",
       license = 'Apache 2.0',
-      zip_safe=False,
       install_requires=[
         'six',
       ],
       packages=['testflo'],
-      package_dir={'': 'src'},
-      entry_points = {
-          "console_scripts": [
-                "testflo=testflo.main:main",
-              ],
-      }
+      entry_points = """
+          [console_scripts]
+          testflo=testflo.main:main
+      """
       )
