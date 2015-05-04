@@ -11,6 +11,7 @@ from os.path import basename, dirname, isdir
 
 from testflo.util import find_files, get_module, ismethod
 from testflo.runner import get_testcase
+from testflo.result import TestResult
 
 
 class TestDiscoverer(object):
@@ -56,7 +57,8 @@ class TestDiscoverer(object):
         try:
             fname, mod = get_module(filename)
         except:
-            sys.stderr.write(traceback.format_exc())
+            yield TestResult(filename, 0, 0, 'FAIL',
+                             traceback.format_exc())
         else:
             if basename(fname).startswith(six.text_type('__init__.')):
                 for result in self._dir_iter(dirname(fname)):
@@ -102,7 +104,11 @@ class TestDiscoverer(object):
             if method:
                 yield testspec
             else:  # could be a test function or a TestCase
-                fname, mod = get_module(module)
+                try:
+                    fname, mod = get_module(module)
+                except:
+                    yield TestResult(testspec, 0, 0, 'FAIL', traceback.format_exc())
+                    return
                 try:
                     tcase = get_testcase(fname, mod, tcasename)
                 except (AttributeError, TypeError):

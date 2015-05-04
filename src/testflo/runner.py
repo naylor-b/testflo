@@ -146,6 +146,10 @@ class TestRunner(object):
         """Runs the test indicated by the given 'specific' testspec, which
         specifies an individual test function or method.
         """
+        if isinstance(test, TestResult):
+            # premature failure occurred during discovery, just return it
+            return test
+
         start_time = time.time()
         try:
             fname, mod, testcase, method = parse_test_path(test)

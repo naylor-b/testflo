@@ -34,7 +34,7 @@ class TestResult(object):
         """
         parts = self.testspec.split(':', 1)
         fname = os.path.basename(parts[0])
-        return ':'.join((fname, parts[1]))
+        return ':'.join((fname, parts[-1]))
 
     def __str__(self):
         if self.err_msg:
