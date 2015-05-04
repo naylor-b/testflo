@@ -19,5 +19,16 @@ If you want serial execution instead, just specify -n 1 on the command line.
 As usual, -h on the command line will list all of the available command line
 arguments.
 
-So far, testflo has only been tested on linux and OS X with python 2.7.  
-If you try it out and have any feedback, submit it as an issue on github.
+Operating Systems:
+Most testing has been done on linux, but testflo has also been used 
+successuflly on Windows and OS X.
+
+Python Versions:
+Most testing has been done under python 2.7, but some has now been done under
+python 3.4 as well.
+
+If you try it out and find any problems, submit them as issues on github at
+https://github.com/naylor-b/testflo.
+
+
+
