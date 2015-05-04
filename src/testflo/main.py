@@ -5,7 +5,7 @@ them through a pipeline of iterators that operate on them and transform them
 into TestResult objects, then pass them on to other objects in the pipeline.
 
 The objects passed through the pipline are either strings that
-indicate which test to run (I call them test specifiers), or TestReult
+indicate which test to run (test specifiers), or TestReult
 objects, which contain only the test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
@@ -14,6 +14,7 @@ The API necessary for objects that participate in the pipeline is a callable
 that takes an input iterator and returns an output iterator.
 
 """
+from __future__ import print_function
 
 import os
 import sys
@@ -36,7 +37,7 @@ def dryrun(input_iter):
     actually running them.
     """
     for spec in input_iter:
-        print spec
+        print(spec)
         yield TestResult(spec, 0, 0)
 
 def run_pipeline(source, pipe):

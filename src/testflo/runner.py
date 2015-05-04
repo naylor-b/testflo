@@ -6,11 +6,12 @@ import time
 import unittest
 import inspect
 
-from cStringIO import StringIO
+from six import advance_iterator
+from six.moves import cStringIO
 from types import FunctionType, MethodType
 from multiprocessing import Queue, Process
 
-from testflo.util import get_module
+from testflo.util import get_module, ismethod
 from testflo.result import TestResult
 from testflo.devnull import DevNull
 
@@ -57,7 +58,7 @@ def parse_test_path(testspec):
             testcase = obj
             if method:
                 meth = getattr(obj, method)
-                if not isinstance(meth, MethodType):
+                if not ismethod(meth):
                     raise TypeError("'%s' is not a method." % rest)
         elif isinstance(obj, FunctionType):
             method = obj
@@ -166,7 +167,7 @@ class TestRunner(object):
             outstream = sys.stdout
         else:
             outstream = DevNull()
-        errstream = StringIO()
+        errstream = cStringIO()
 
         setup = getattr(parent, 'setUp', None)
         teardown = getattr(parent, 'tearDown', None)
@@ -241,7 +242,7 @@ class ConcurrentTestRunner(TestRunner):
         numtests = 0
         try:
             for proc in self.procs:
-                self.task_queue.put(it.next())
+                self.task_queue.put(advance_iterator(it))
                 numtests += 1
         except StopIteration:
             pass
@@ -253,7 +254,7 @@ class ConcurrentTestRunner(TestRunner):
                     numtests -= 1
                     if self.stop and result.status == 'FAIL':
                         break
-                    self.task_queue.put(it.next())
+                    self.task_queue.put(advance_iterator(it))
                     numtests += 1
             except StopIteration:
                 pass

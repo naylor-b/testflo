@@ -5,8 +5,11 @@ Misc. file utility routines.
 import os
 import sys
 import itertools
-import ConfigParser
+import inspect
 import warnings
+
+from six import string_types, PY3
+from six.moves.configparser import ConfigParser
 
 try:
     from multiprocessing import cpu_count
@@ -126,32 +129,32 @@ def find_files(start, match=None, exclude=None,
     subject to directory filtering.
 
     """
-    startdirs = [start] if isinstance(start, basestring) else start
+    startdirs = [start] if isinstance(start, string_types) else start
     if len(startdirs) == 0:
         return iter([])
 
     if match is None:
         matcher = bool
-    elif isinstance(match, basestring):
+    elif isinstance(match, string_types):
         matcher = lambda name: fnmatch(name, match)
     else:
         matcher = match
 
     if dirmatch is None:
         dmatcher = bool
-    elif isinstance(dirmatch, basestring):
+    elif isinstance(dirmatch, string_types):
         dmatcher = lambda name: fnmatch(name, dirmatch)
     else:
         dmatcher = dirmatch
 
-    if isinstance(exclude, basestring):
+    if isinstance(exclude, string_types):
         fmatch = lambda name: matcher(name) and not fnmatch(name, exclude)
     elif exclude is not None:
         fmatch = lambda name: matcher(name) and not exclude(name)
     else:
         fmatch = matcher
 
-    if isinstance(direxclude, basestring):
+    if isinstance(direxclude, string_types):
         if dmatcher is bool:
             dmatch = lambda name: not fnmatch(name, direxclude)
         else:
@@ -237,9 +240,17 @@ def read_test_file(testfile):
                 yield line
 
 def read_config_file(cfgfile, options):
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser()
     config.readfp(open(cfgfile))
 
     if config.has_option('testflo', 'skip_dirs'):
         skips = config.get('testflo', 'skip_dirs')
         options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
+
+
+# in python3, inspect.ismethod doesn't work as you might expect, so...
+if PY3:
+    def ismethod(obj):
+        return inspect.isfunction(obj) or inspect.ismethod(obj)
+else:
+    ismethod = inspect.ismethod

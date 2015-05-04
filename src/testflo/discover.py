@@ -4,17 +4,19 @@ import sys
 import traceback
 import inspect
 import unittest
+import six
 
 from fnmatch import fnmatch
 from os.path import basename, dirname, isdir
 
-from testflo.util import find_files, get_module
+from testflo.util import find_files, get_module, ismethod
 from testflo.runner import get_testcase
+
 
 class TestDiscoverer(object):
 
-    def __init__(self, module_pattern='test*.py',
-                       func_pattern='test*',
+    def __init__(self, module_pattern=six.text_type('test*.py'),
+                       func_pattern=six.text_type('test*'),
                        dir_exclude=None):
         self.module_pattern = module_pattern
         self.func_pattern = func_pattern
@@ -44,7 +46,7 @@ class TestDiscoverer(object):
         for f in find_files(dname,
                             match=self.module_pattern,
                             direxclude=self.dir_exclude):
-            if not basename(f).startswith('__init__.'):
+            if not basename(f).startswith(six.text_type('__init__.')):
                 for result in self._module_iter(f):
                     yield result
 
@@ -56,7 +58,7 @@ class TestDiscoverer(object):
         except:
             sys.stderr.write(traceback.format_exc())
         else:
-            if basename(fname).startswith('__init__.'):
+            if basename(fname).startswith(six.text_type('__init__.')):
                 for result in self._dir_iter(dirname(fname)):
                     yield result
             else:
@@ -74,7 +76,7 @@ class TestDiscoverer(object):
         """Iterate over all testspecs found in a TestCase class."""
 
         methods = []
-        for name, method in inspect.getmembers(testcase, inspect.ismethod):
+        for name, method in inspect.getmembers(testcase, ismethod):
             if fnmatch(name, self.func_pattern):
                 methods.append(''.join((fname, ':', testcase.__name__,
                                                '.', method.__name__)))
