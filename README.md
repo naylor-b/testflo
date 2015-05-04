@@ -19,11 +19,15 @@ If you want serial execution instead, just specify -n 1 on the command line.
 As usual, -h on the command line will list all of the available command line
 arguments.
 
-Operating Systems:
+Operating Systems
+-----------------
+
 Most testing has been done on linux, but testflo has also been used 
 successuflly on Windows and OS X.
 
-Python Versions:
+Python Versions
+---------------
+
 Most testing has been done under python 2.7, but some has now been done under
 python 3.4 as well.
 
