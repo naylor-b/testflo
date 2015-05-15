@@ -31,6 +31,10 @@ Python Versions
 Most testing has been done under python 2.7, but some has now been done under
 python 3.4 as well.
 
+You can install testflo directly from github using the following command:
+
+`pip install git+https://github.com/naylor-b/testflo.git`
+
 If you try it out and find any problems, submit them as issues on github at
 https://github.com/naylor-b/testflo.
 
