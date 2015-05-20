@@ -75,6 +75,11 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
         """Run test concurrently."""
 
         for testspec in input_iter:
+            if isinstance(testspec, TestResult):
+                # test already failed during discovery, probably an
+                # import failure
+                yield testspec
+                continue
             fname, mod, testcase, method = parse_test_path(testspec)
             self.testcase = testcase
             if testcase and hasattr(testcase, 'N_PROCS'):
