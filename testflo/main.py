@@ -28,7 +28,8 @@ from testflo.result import ResultPrinter, ResultSummary, TestResult
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser
+from testflo.util import read_config_file, read_test_file, _get_parser, \
+                         find_files, setup_coverage, find_module
 
 
 def dryrun(input_iter):
@@ -61,7 +62,11 @@ def run_pipeline(source, pipe):
 
     return return_code
 
+runner = None
+
 def main(args=None):
+    global runner
+
     if args is None:
         args = sys.argv[1:]
 
@@ -98,6 +103,8 @@ skip_dirs=site-packages,
                 return True
         return False
 
+    cov = setup_coverage(options)
+
     with open(options.outfile, 'w') as report:
         pipeline = [
             TestDiscoverer(dir_exclude=dir_exclude).get_iter,
@@ -114,12 +121,14 @@ skip_dirs=site-packages,
                 try:
                     import mpi4py
                 except ImportError:
-                    pipeline.append(IsolatedTestRunner(options, args).get_iter)
+                    runner = IsolatedTestRunner(options, args)
                 else:
                     from testflo.mpi import IsolatedMPITestRunner
-                    pipeline.append(IsolatedMPITestRunner(options, args).get_iter)
+                    runner = IsolatedMPITestRunner(options, args)
             else:
-                pipeline.append(ConcurrentTestRunner(options).get_iter)
+                runner = ConcurrentTestRunner(options)
+
+            pipeline.append(runner.get_iter)
 
             pipeline.extend(
             [
@@ -134,7 +143,34 @@ skip_dirs=site-packages,
         if options.maxtime > 0:
             pipeline.append(TimeFilter(options.maxtime).get_iter)
 
-        return run_pipeline(tests, pipeline)
+        retval = run_pipeline(tests, pipeline)
+
+        if cov:
+            excl = lambda n: (n.startswith('test_') and n.endswith('.py')) or \
+                             n.startswith('__init__.')
+            dirs = []
+            for n in options.coverpkgs:
+                if os.path.isdir(n):
+                    dirs.append(n)
+                else:
+                    path = find_module(n)
+                    if path is None:
+                        raise RuntimeError("Can't find module %s" % n)
+                    dirs.append(os.path.dirname(path))
+
+            morfs = list(find_files(dirs, match='*.py',exclude=excl))
+            cov.combine()
+            #cov.report(morfs=morfs)
+            dname = '_html'
+            cov.html_report(morfs=morfs, directory=dname)
+            outfile = os.path.join(os.getcwd(), dname, 'index.html')
+            import webbrowser
+            if sys.platform == 'darwin':
+                os.system('open %s' % outfile)
+            else:
+                webbrowser.get().open(outfile)
+
+        return retval
 
 
 def run_tests(args=None):

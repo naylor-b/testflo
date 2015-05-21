@@ -11,7 +11,7 @@ from six.moves import cStringIO
 from types import FunctionType, MethodType
 from multiprocessing import Queue, Process
 
-from testflo.util import get_module, ismethod
+from testflo.util import get_module, ismethod, setup_coverage
 from testflo.result import TestResult
 from testflo.devnull import DevNull
 
@@ -121,10 +121,14 @@ def worker(runner, test_queue, done_queue):
             done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
                            traceback.format_exc()))
 
+    if runner.cov:
+        runner.cov.save()
+
 class TestRunner(object):
     def __init__(self, options):
         self.nocap_stdout = options.nocapture
         self.stop = options.stop
+        self.cov = setup_coverage(options)
 
     def get_iter(self, input_iter):
         """Run tests serially."""
@@ -134,6 +138,9 @@ class TestRunner(object):
             yield result
             if self.stop and result.status == 'FAIL':
                 break
+
+        if self.cov:
+            self.cov.save()
 
     def get_test_parent(self, mod, testcase_class, method):
         """Return the parent object that contains the test"""
@@ -185,6 +192,9 @@ class TestRunner(object):
             sys.stdout = outstream
             sys.stderr = errstream
 
+            if self.cov:
+                self.cov.start()
+
             # if there's a setUp method, run it
             if setup:
                 status = try_call(setup)
@@ -204,6 +214,9 @@ class TestRunner(object):
                                 errstream.getvalue())
 
         finally:
+            if self.cov:
+                self.cov.stop()
+
             sys.stderr = old_err
             sys.stdout = old_out
 
@@ -240,7 +253,7 @@ class ConcurrentTestRunner(TestRunner):
                 proc.start()
 
     def run_concurrent_tests(self, input_iter):
-        """Run test concurrently."""
+        """Run tests concurrently."""
 
         it = iter(input_iter)
         numtests = 0

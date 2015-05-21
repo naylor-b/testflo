@@ -23,6 +23,11 @@ from os.path import join, dirname, basename, isfile, \
 
 from argparse import ArgumentParser
 
+try:
+    from coverage import coverage
+except ImportError:
+    coverage = None
+
 
 def _get_parser():
     """Returns a parser to handle command line args."""
@@ -68,6 +73,11 @@ def _get_parser():
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
                         help="If true, stdout will not be captured and will be"
                              " written to the screen immediately")
+    parser.add_argument('--coverage', action='store_true', dest='coverage',
+                        help="If true, perform coverage analysis")
+    parser.add_argument('--coverpkg', action='append', dest='coverpkgs',
+                        help="Adds the given package to the coverage list")
+
     parser.add_argument('tests', metavar='test', nargs='*',
                        help='A test method/case/module/directory to run')
 
@@ -209,6 +219,8 @@ def get_module(fname):
     """Given a filename or module path name, return a tuple
     of the form (filename, module).
     """
+    global _coverobj
+
     if fname.endswith('.py'):
         modpath = get_module_path(fname)
         if not modpath:
@@ -220,6 +232,9 @@ def get_module(fname):
         if not fname:
             raise ImportError("can't import %s" % modpath)
 
+    if _coverobj:
+        _coverobj.start()
+
     try:
         __import__(modpath)
     except ImportError:
@@ -228,6 +243,9 @@ def get_module(fname):
             __import__(modpath)
         finally:
             sys.path.pop()
+    finally:
+        if _coverobj:
+            _coverobj.stop()
 
     return fname, sys.modules[modpath]
 
@@ -247,6 +265,18 @@ def read_config_file(cfgfile, options):
         skips = config.get('testflo', 'skip_dirs')
         options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
 
+# use to hold a global coverage obj
+_coverobj = None
+
+def setup_coverage(options):
+    global _coverobj
+    if _coverobj is None and options.coverage:
+        if not coverage:
+            raise RuntimeError("coverage has not been installed.")
+        if not options.coverpkgs:
+            raise RuntimeError("No packages specified for coverage")
+        _coverobj = coverage(data_suffix=True, source=options.coverpkgs)
+    return _coverobj
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
