@@ -23,10 +23,7 @@ from os.path import join, dirname, basename, isfile, \
 
 from argparse import ArgumentParser
 
-try:
-    from coverage import coverage
-except ImportError:
-    coverage = None
+from testflo.cover import start_coverage, stop_coverage
 
 
 def _get_parser():
@@ -219,7 +216,6 @@ def get_module(fname):
     """Given a filename or module path name, return a tuple
     of the form (filename, module).
     """
-    global _coverobj
 
     if fname.endswith('.py'):
         modpath = get_module_path(fname)
@@ -232,8 +228,7 @@ def get_module(fname):
         if not fname:
             raise ImportError("can't import %s" % modpath)
 
-    if _coverobj:
-        _coverobj.start()
+    start_coverage()
 
     try:
         __import__(modpath)
@@ -244,8 +239,7 @@ def get_module(fname):
         finally:
             sys.path.pop()
     finally:
-        if _coverobj:
-            _coverobj.stop()
+        stop_coverage()
 
     return fname, sys.modules[modpath]
 
@@ -265,18 +259,6 @@ def read_config_file(cfgfile, options):
         skips = config.get('testflo', 'skip_dirs')
         options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
 
-# use to hold a global coverage obj
-_coverobj = None
-
-def setup_coverage(options):
-    global _coverobj
-    if _coverobj is None and options.coverage:
-        if not coverage:
-            raise RuntimeError("coverage has not been installed.")
-        if not options.coverpkgs:
-            raise RuntimeError("No packages specified for coverage")
-        _coverobj = coverage(data_suffix=True, source=options.coverpkgs)
-    return _coverobj
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

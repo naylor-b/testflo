@@ -11,7 +11,9 @@ from six.moves import cStringIO
 from types import FunctionType, MethodType
 from multiprocessing import Queue, Process
 
-from testflo.util import get_module, ismethod, setup_coverage
+from testflo.util import get_module, ismethod
+from testflo.cover import setup_coverage, start_coverage, stop_coverage, \
+                          save_coverage
 from testflo.result import TestResult
 from testflo.devnull import DevNull
 
@@ -121,14 +123,13 @@ def worker(runner, test_queue, done_queue):
             done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
                            traceback.format_exc()))
 
-    if runner.cov:
-        runner.cov.save()
+    save_coverage()
 
 class TestRunner(object):
     def __init__(self, options):
         self.nocap_stdout = options.nocapture
         self.stop = options.stop
-        self.cov = setup_coverage(options)
+        setup_coverage(options)
 
     def get_iter(self, input_iter):
         """Run tests serially."""
@@ -139,8 +140,7 @@ class TestRunner(object):
             if self.stop and result.status == 'FAIL':
                 break
 
-        if self.cov:
-            self.cov.save()
+        save_coverage()
 
     def get_test_parent(self, mod, testcase_class, method):
         """Return the parent object that contains the test"""
@@ -192,8 +192,7 @@ class TestRunner(object):
             sys.stdout = outstream
             sys.stderr = errstream
 
-            if self.cov:
-                self.cov.start()
+            start_coverage()
 
             # if there's a setUp method, run it
             if setup:
@@ -214,8 +213,7 @@ class TestRunner(object):
                                 errstream.getvalue())
 
         finally:
-            if self.cov:
-                self.cov.stop()
+            stop_coverage()
 
             sys.stderr = old_err
             sys.stdout = old_out

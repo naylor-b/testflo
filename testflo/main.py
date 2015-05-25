@@ -29,7 +29,8 @@ from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
 from testflo.util import read_config_file, read_test_file, _get_parser, \
-                         find_files, setup_coverage, find_module
+                         find_files, find_module
+from testflo.cover import setup_coverage, finalize_coverage
 
 
 def dryrun(input_iter):
@@ -103,7 +104,7 @@ skip_dirs=site-packages,
                 return True
         return False
 
-    cov = setup_coverage(options)
+    setup_coverage(options)
 
     with open(options.outfile, 'w') as report:
         pipeline = [
@@ -145,30 +146,7 @@ skip_dirs=site-packages,
 
         retval = run_pipeline(tests, pipeline)
 
-        if cov:
-            excl = lambda n: (n.startswith('test_') and n.endswith('.py')) or \
-                             n.startswith('__init__.')
-            dirs = []
-            for n in options.coverpkgs:
-                if os.path.isdir(n):
-                    dirs.append(n)
-                else:
-                    path = find_module(n)
-                    if path is None:
-                        raise RuntimeError("Can't find module %s" % n)
-                    dirs.append(os.path.dirname(path))
-
-            morfs = list(find_files(dirs, match='*.py',exclude=excl))
-            cov.combine()
-            #cov.report(morfs=morfs)
-            dname = '_html'
-            cov.html_report(morfs=morfs, directory=dname)
-            outfile = os.path.join(os.getcwd(), dname, 'index.html')
-            import webbrowser
-            if sys.platform == 'darwin':
-                os.system('open %s' % outfile)
-            else:
-                webbrowser.get().open(outfile)
+        finalize_coverage(options)
 
         return retval
 
