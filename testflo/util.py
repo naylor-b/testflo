@@ -55,28 +55,39 @@ def _get_parser():
                              ' execution, specify a value of 1.')
     parser.add_argument('-o', '--outfile', action='store', dest='outfile',
                         metavar='OUTFILE', default='test_report.out',
-                        help='Name of test report file')
+                        help='Name of test report file.  Default is test_report.out.')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='If true, include testspec and elapsed time in '
-                             'screen output')
+                        help='Include testspec and elapsed time in '
+                             'screen output.')
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
-                        help="If true, don't actually run tests, but report"
-                          "which tests would have been run")
+                        help="Don't actually run tests, but print "
+                          "which tests would have been run.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
-                        help="If true, run each test in a separate subprocess."
+                        help="Run each test in a separate subprocess."
                              " This is required to run MPI tests.")
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
-                        help="If true, stop after the first test failure")
+                        help="Stop after the first test failure, or as soon as possible"
+                             " when running concurrent tests.")
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
-                        help="If true, stdout will not be captured and will be"
-                             " written to the screen immediately")
+                        help="Standard output (stdout) will not be captured and will be"
+                             " written to the screen immediately.")
     parser.add_argument('--coverage', action='store_true', dest='coverage',
-                        help="If true, perform coverage analysis")
+                        help="Perform coverage analysis.")
     parser.add_argument('--coverpkg', action='append', dest='coverpkgs',
-                        help="Adds the given package to the coverage list")
+                        metavar='COVERPKG',
+                        help="Add the given package to the coverage list. You"
+                              " can use this option multiple times to cover"
+                              " multiple packages.")
+    parser.add_argument('--profile', action='store_true', dest='profile',
+                        help="Perform profiling.")
+    parser.add_argument('--profile_port', action='store', dest='prof_port',
+                        default=4242, type=int,
+                        help='Port used for profile viewer server.')
+    parser.add_argument('--profile_save', action='store_true', dest='prof_save',
+                        help="Don't delete the profile stats files.")
 
     parser.add_argument('tests', metavar='test', nargs='*',
-                       help='A test method/case/module/directory to run')
+                       help='A test method, test case, module, or directory to run.')
 
     return parser
 

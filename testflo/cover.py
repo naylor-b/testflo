@@ -21,7 +21,8 @@ def setup_coverage(options):
         if not coverage:
             raise RuntimeError("coverage has not been installed.")
         if not options.coverpkgs:
-            raise RuntimeError("No packages specified for coverage")
+            raise RuntimeError("No packages specified for coverage. "
+                               "Use the --coverpkg option to add a package.")
         _coverobj = coverage(data_suffix=True, source=options.coverpkgs)
     return _coverobj
 

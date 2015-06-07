@@ -14,6 +14,9 @@ from multiprocessing import Queue, Process
 from testflo.util import get_module, ismethod
 from testflo.cover import setup_coverage, start_coverage, stop_coverage, \
                           save_coverage
+from testflo.profile import setup_profile, start_profile, stop_profile, \
+                          save_profile
+import testflo.profile
 from testflo.result import TestResult
 from testflo.devnull import DevNull
 
@@ -92,6 +95,7 @@ def try_call(method):
     """
     status = 'OK'
     try:
+        start_profile()
         method()
     except Exception as e:
         msg = traceback.format_exc()
@@ -105,16 +109,24 @@ def try_call(method):
         msg = traceback.format_exc()
         status = 'FAIL'
         sys.stderr.write(msg)
+    finally:
+        stop_profile()
 
     return status
 
-def worker(runner, test_queue, done_queue):
+def worker(runner, test_queue, done_queue, worker_id):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the TestResult object
     on the done_queue.
     """
+
+    # need a unique profile output file for each worker process
+    testflo.profile._prof_file = 'profile_%s.out' % worker_id
+
+    test_count = 0
     for testspec in iter(test_queue.get, 'STOP'):
         try:
+            test_count += 1
             done_queue.put(runner.run_testspec(testspec))
         except:
             # we generally shouldn't get here, but just in case,
@@ -123,7 +135,10 @@ def worker(runner, test_queue, done_queue):
             done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
                            traceback.format_exc()))
 
-    save_coverage()
+    # don't save anything unless we actually ran a test
+    if test_count > 0:
+        save_coverage()
+        save_profile()
 
 class TestRunner(object):
     def __init__(self, options):
@@ -245,8 +260,11 @@ class ConcurrentTestRunner(TestRunner):
 
             # Start worker processes
             for i in range(self.num_procs):
+                worker_id = "%d_%d" % (os.getpid(), i)
                 self.procs.append(Process(target=worker,
-                        args=(worker_runner, self.task_queue, self.done_queue)))
+                                          args=(worker_runner, self.task_queue,
+                                                self.done_queue, worker_id)))
+
             for proc in self.procs:
                 proc.start()
 

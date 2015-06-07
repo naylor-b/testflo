@@ -31,7 +31,7 @@ from testflo.timefilt import TimeFilter
 from testflo.util import read_config_file, read_test_file, _get_parser, \
                          find_files, find_module
 from testflo.cover import setup_coverage, finalize_coverage
-
+from testflo.profile import setup_profile, finalize_profile
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants
@@ -105,6 +105,7 @@ skip_dirs=site-packages,
         return False
 
     setup_coverage(options)
+    setup_profile(options)
 
     with open(options.outfile, 'w') as report:
         pipeline = [
@@ -147,6 +148,7 @@ skip_dirs=site-packages,
         retval = run_pipeline(tests, pipeline)
 
         finalize_coverage(options)
+        finalize_profile(options)
 
         return retval
 
