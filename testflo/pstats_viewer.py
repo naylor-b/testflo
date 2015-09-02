@@ -4,7 +4,6 @@ from __future__ import print_function
 #    http://sourceforge.net/p/imvu/code/HEAD/tree/imvu_open_source/tools/pstats_viewer.py
 
 #from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from functools import partial
 import os
 import pstats
 import sys
@@ -269,9 +268,6 @@ def view_pstats(prof_pattern, options):
         stats = pstats.Stats(prof_files[0])
         for pfile in prof_files[1:]:
             stats.add(pfile)
-        if not options.prof_save:
-            for pfile in prof_files:
-                os.remove(pfile)
 
     httpd = HTTPServer(
         ('', port),
@@ -284,3 +280,16 @@ def view_pstats(prof_pattern, options):
 
     while serve_thread.isAlive():
         serve_thread.join(timeout=1)
+
+def main():
+    class Opt(object):
+        pass
+    options = Opt()
+    if len(sys.argv[1:]) > 1:
+        options.prof_port = int(sys.argv[2])
+    else:
+        options.prof_port = 8009
+    view_pstats(sys.argv[1], options)
+
+if __name__ == '__main__':
+    main()

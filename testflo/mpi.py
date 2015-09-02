@@ -14,16 +14,6 @@ from testflo.runner import TestRunner, parse_test_path, \
 from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.result import TestResult
 
-def under_mpirun():
-    """Return True if we're being executed under mpirun."""
-    # TODO: this is a bit of a hack and there appears to be
-    # no consistent set of environment vars between MPI
-    # implementations.
-    for name in os.environ.keys():
-        if name.startswith('OMPI_COMM') or name.startswith('MPIR_'):
-            return True
-    return False
-
 def run_mpi(testspec, nprocs, args):
     """This runs the test using mpirun in a subprocess,
     then returns the TestResult object.
@@ -34,12 +24,12 @@ def run_mpi(testspec, nprocs, args):
         start = time.time()
         ferr = TemporaryFile(mode='w+t')
 
-        cmd = 'mpirun -n %d %s %s %s' % (nprocs,
-                         sys.executable,
-                         os.path.join(os.path.dirname(__file__), 'mpirun.py'),
-                         testspec)
-        cmd = ' '.join([cmd]+args)
-        p = subprocess.Popen(cmd, stderr=ferr, shell=True)
+        cmd = ['mpirun', '-n', str(nprocs),
+               sys.executable,
+               os.path.join(os.path.dirname(__file__), 'mpirun.py'),
+               testspec]
+        cmd = cmd+args
+        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
         p.wait()
         end = time.time()
 
@@ -79,10 +69,11 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
                 # test already failed during discovery, probably an
                 # import failure
                 yield testspec
-                continue
-            fname, mod, testcase, method = parse_test_path(testspec)
-            self.testcase = testcase
-            if testcase and hasattr(testcase, 'N_PROCS'):
-                yield run_mpi(testspec, testcase.N_PROCS, self.args)
             else:
-                yield run_isolated(testspec, self.args)
+                fname, mod, testcase, method = parse_test_path(testspec)
+                self.testcase = testcase
+
+                if testcase and hasattr(testcase, 'N_PROCS'):
+                    yield run_mpi(testspec, testcase.N_PROCS, self.args)
+                else:
+                    yield run_isolated(testspec, self.args)

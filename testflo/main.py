@@ -136,11 +136,14 @@ skip_dirs=site-packages,
             [
                 ResultPrinter(verbose=options.verbose).get_iter,
                 ResultSummary().get_iter,
-
-                # mirror results and summary to a report file
-                ResultPrinter(report, verbose=options.verbose).get_iter,
-                ResultSummary(report).get_iter,
             ])
+            if not options.noreport:
+                # mirror results and summary to a report file
+                pipeline.extend(
+                [
+                    ResultPrinter(report, verbose=options.verbose).get_iter,
+                    ResultSummary(report).get_iter,
+                ])
 
         if options.maxtime > 0:
             pipeline.append(TimeFilter(options.maxtime).get_iter)

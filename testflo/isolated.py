@@ -14,7 +14,6 @@ from testflo.util import _get_parser
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
 
-
 def run_isolated(testspec, args):
     """This runs the test in a subprocess,
     then returns the TestResult object.
@@ -25,11 +24,11 @@ def run_isolated(testspec, args):
         start = time.time()
         ferr = TemporaryFile(mode='w+t')
 
-        cmd = '%s %s %s' % (sys.executable,
-                         os.path.join(os.path.dirname(__file__), 'isolated.py'),
-                         testspec)
-        cmd = ' '.join([cmd]+args)
-        p = subprocess.Popen(cmd, stderr=ferr, shell=True)
+        cmd = [sys.executable,
+               os.path.join(os.path.dirname(__file__), 'isolated.py'),
+               testspec]
+        cmd = cmd+args
+        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
         p.wait()
         end = time.time()
 
@@ -70,15 +69,19 @@ class IsolatedTestRunner(TestRunner):
         self.args = [a for a in args if a.startswith('-')]
 
     def run_isolated_tests(self, input_iter):
-        """Run test concurrently."""
+        """Run each test isolated in a separate process."""
 
         # use this test runner in the subprocesses
         self.options.isolated = False
         self.options.num_procs = 1
 
         for testspec in input_iter:
-            result = run_isolated(testspec, self.args)
-            yield result
+            if isinstance(testspec, TestResult):
+                # test already failed during discovery, probably an
+                # import failure
+                yield testspec
+            else:
+                yield run_isolated(testspec, self.args)
 
 
 if __name__ == '__main__':
@@ -88,7 +91,8 @@ if __name__ == '__main__':
     try:
         options = _get_parser().parse_args()
         runner = TestRunner(options)
-        result = runner.run_testspec(options.tests[0])
+        for result in runner.get_iter([options.tests[0]]):
+             break
         if result.status != 'OK':
             sys.stderr.write(result.err_msg)
             exitcode = exit_codes[result.status]

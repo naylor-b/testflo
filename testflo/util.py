@@ -1,5 +1,5 @@
 """
-Misc. file utility routines.
+Misc. utility routines.
 """
 
 import os
@@ -14,8 +14,7 @@ from six.moves.configparser import ConfigParser
 try:
     from multiprocessing import cpu_count
 except ImportError:
-    def cpu_count():
-        return 1
+    pass
 
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile, \
@@ -83,8 +82,9 @@ def _get_parser():
     parser.add_argument('--profile_port', action='store', dest='prof_port',
                         default=4242, type=int,
                         help='Port used for profile viewer server.')
-    parser.add_argument('--profile_save', action='store_true', dest='prof_save',
-                        help="Don't delete the profile stats files.")
+
+    parser.add_argument('--noreport', action='store_true', dest='noreport',
+                        help="Don't create a test results file.")
 
     parser.add_argument('tests', metavar='test', nargs='*',
                        help='A test method, test case, module, or directory to run.')
@@ -188,7 +188,6 @@ def find_files(start, match=None, exclude=None,
     else:
         return iters[0]
 
-
 def get_module_path(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
@@ -203,6 +202,15 @@ def get_module_path(fpath):
             pnames.append(pname)
     return '.'.join(pnames[::-1])
 
+def parent_dirs(fpath):
+    """Return a list of the absolute paths of the parent directory and
+    each of its parent directories for the given file.
+    """
+    parts = abspath(fpath).split(os.path.sep)
+    pdirs = []
+    for i in range(2,len(parts)):
+        pdirs.append(os.path.sep.join(parts[:i]))
+    return pdirs[::-1]
 
 def find_module(name):
     """Return the pathname of the Python file corresponding to the
@@ -244,11 +252,17 @@ def get_module(fname):
     try:
         __import__(modpath)
     except ImportError:
-        sys.path.append(os.path.dirname(fname))
+        # this might be a module that's not in the same
+        # environment as testflo, so try temporarily prepending
+        # its parent dirs to sys.path so it'll (hopefully) be
+        # importable
+        pdirs = parent_dirs(fname)
+        oldpath = sys.path[:]
+        sys.path.extend(pdirs)
         try:
             __import__(modpath)
         finally:
-            sys.path.pop()
+            sys.path = oldpath
     finally:
         stop_coverage()
 
