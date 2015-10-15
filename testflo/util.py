@@ -71,7 +71,9 @@ def _get_parser():
                         help="If true, stdout will not be captured and will be"
                              " written to the screen immediately")
     parser.add_argument('--coverage', action='store_true', dest='coverage',
-                        help="If true, perform coverage analysis")
+                        help="If true, perform coverage analysis and display results on stdout")
+    parser.add_argument('--coverage-html', action='store_true', dest='coveragehtml',
+                        help="If true, perform coverage analysis and display results in browser")
     parser.add_argument('--coverpkg', action='append', dest='coverpkgs',
                         help="Adds the given package to the coverage list")
 

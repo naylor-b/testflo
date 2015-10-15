@@ -17,7 +17,7 @@ _coverobj = None
 
 def setup_coverage(options):
     global _coverobj
-    if _coverobj is None and options.coverage:
+    if _coverobj is None and (options.coverage or options.coveragehtml):
         if not coverage:
             raise RuntimeError("coverage has not been installed.")
         if not options.coverpkgs:
@@ -54,12 +54,14 @@ def finalize_coverage(options):
 
         morfs = list(find_files(dirs, match='*.py',exclude=excl))
         _coverobj.combine()
-        #cov.report(morfs=morfs)
-        dname = '_html'
-        _coverobj.html_report(morfs=morfs, directory=dname)
-        outfile = os.path.join(os.getcwd(), dname, 'index.html')
-
-        if sys.platform == 'darwin':
-            os.system('open %s' % outfile)
+        if options.coverage:
+            _coverobj.report(morfs=morfs)
         else:
-            webbrowser.get().open(outfile)
+            dname = '_html'
+            _coverobj.html_report(morfs=morfs, directory=dname)
+            outfile = os.path.join(os.getcwd(), dname, 'index.html')
+
+            if sys.platform == 'darwin':
+                os.system('open %s' % outfile)
+            else:
+                webbrowser.get().open(outfile)
