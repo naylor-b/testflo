@@ -33,4 +33,4 @@ install:
 script: testflo . --coverage --coverpkg testflo
 
 after_success:
-  coveralls
+  coveralls debug
