@@ -24,7 +24,7 @@ def setup_coverage(options):
         if not options.coverpkgs:
             raise RuntimeError("No packages specified for coverage. "
                                "Use the --coverpkg option to add a package.")
-        _coverobj = coverage(data_suffix=False, source=options.coverpkgs)
+        _coverobj = coverage(data_suffix=True, source=options.coverpkgs)
     return _coverobj
 
 def start_coverage():
@@ -62,6 +62,7 @@ def finalize_coverage(options):
 
         morfs = list(find_files(dirs, match='*.py', exclude=excl))
         _coverobj.combine()
+        _coverobj.save()
         if options.coverage:
             _coverobj.report(morfs=morfs)
         else:

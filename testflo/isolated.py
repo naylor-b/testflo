@@ -92,7 +92,7 @@ if __name__ == '__main__':
         options = _get_parser().parse_args()
         runner = TestRunner(options)
         for result in runner.get_iter([options.tests[0]]):
-             break
+            break
         if result.status != 'OK':
             sys.stderr.write(result.err_msg)
             exitcode = exit_codes[result.status]
