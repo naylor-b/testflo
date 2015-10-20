@@ -35,5 +35,5 @@ script:
 - cat .coverage
 
 after_success:
-  coveralls debug
-  coveralls
+- coveralls debug
+- coveralls
