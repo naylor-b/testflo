@@ -136,7 +136,9 @@ def worker(runner, test_queue, done_queue, worker_id):
                            traceback.format_exc()))
 
     # don't save anything unless we actually ran a test
+    print 'worker test_count', test_count, 'saving coverage?'
     if test_count > 0:
+        print 'worker test_count', test_count, 'saving coverage!'
         save_coverage()
         save_profile()
 
@@ -155,6 +157,7 @@ class TestRunner(object):
             if self.stop and result.status == 'FAIL':
                 break
 
+        print 'TestRunner test_count', 'saving coverage'
         save_coverage()
 
     def get_test_parent(self, mod, testcase_class, method):
