@@ -46,32 +46,44 @@ def save_coverage():
 
 def finalize_coverage(options):
     print "finalizing coverage..."
-    if _coverobj:
-        from testflo.util import find_files, find_module
-        excl = lambda n: (n.startswith('test_') and n.endswith('.py')) or \
-                         n.startswith('__init__.')
-        dirs = []
-        for n in options.coverpkgs:
-            if os.path.isdir(n):
-                dirs.append(n)
-            else:
-                path = find_module(n)
-                if path is None:
-                    raise RuntimeError("Can't find module %s" % n)
-                dirs.append(os.path.dirname(path))
+    if _coverobj and options.coverpkgs:
+        rank = 0
+        if options.isolated:
+            try:
+                from mpi4py import MPI
+                rank = MPI.COMM_WORLD.rank
+            except ImportError:
+                pass
+        if rank == 0:
+            from testflo.util import find_files, find_module
+            excl = lambda n: (n.startswith('test_') and n.endswith('.py')) or \
+                             n.startswith('__init__.')
+            dirs = []
+            for n in options.coverpkgs:
+                if os.path.isdir(n):
+                    dirs.append(n)
+                else:
+                    path = find_module(n)
+                    if path is None:
+                        raise RuntimeError("Can't find module %s" % n)
+                    dirs.append(os.path.dirname(path))
 
-        morfs = list(find_files(dirs, match='*.py', exclude=excl))
-        _coverobj.combine()
-        data = _coverobj.get_data()
-        data.write_file('.coverage')  # needed for coveralls
-        if options.coverage:
-            _coverobj.report(morfs=morfs)
-        else:
-            dname = '_html'
-            _coverobj.html_report(morfs=morfs, directory=dname)
-            outfile = os.path.join(os.getcwd(), dname, 'index.html')
+            morfs = list(find_files(dirs, match='*.py', exclude=excl))
 
-            if sys.platform == 'darwin':
-                os.system('open %s' % outfile)
+            _coverobj.combine()
+
+            # write combined data to default filename (needed for coveralls)
+            # (NOTE: get_data() should prob be used here, but it returns None)
+            _coverobj.data.write_file('.coverage')
+
+            if options.coverage:
+                _coverobj.report(morfs=morfs)
             else:
-                webbrowser.get().open(outfile)
+                dname = '_html'
+                _coverobj.html_report(morfs=morfs, directory=dname)
+                outfile = os.path.join(os.getcwd(), dname, 'index.html')
+
+                if sys.platform == 'darwin':
+                    os.system('open %s' % outfile)
+                else:
+                    webbrowser.get().open(outfile)

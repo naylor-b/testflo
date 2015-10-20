@@ -72,8 +72,6 @@ def main(args=None):
 
     options = _get_parser().parse_args(args)
 
-    print('options:', options)
-
     options.skip_dirs = []
 
     # read user prefs from ~/.testflo file.  create one if it

@@ -66,7 +66,7 @@ class IsolatedTestRunner(TestRunner):
         super(IsolatedTestRunner, self).__init__(options)
         self.get_iter = self.run_isolated_tests
         self.options = options
-        self.args = [a for a in args if a.startswith('-')]
+        self.args = [a for a in args if a not in options.tests]
 
     def run_isolated_tests(self, input_iter):
         """Run each test isolated in a separate process."""
