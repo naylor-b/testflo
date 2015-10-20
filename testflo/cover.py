@@ -23,7 +23,7 @@ def setup_coverage(options):
         if not options.coverpkgs:
             raise RuntimeError("No packages specified for coverage. "
                                "Use the --coverpkg option to add a package.")
-        _coverobj = coverage(data_suffix=True, source=options.coverpkgs)
+        _coverobj = coverage(data_suffix=False, source=options.coverpkgs)
     return _coverobj
 
 def start_coverage():
@@ -53,7 +53,7 @@ def finalize_coverage(options):
                     raise RuntimeError("Can't find module %s" % n)
                 dirs.append(os.path.dirname(path))
 
-        morfs = list(find_files(dirs, match='*.py',exclude=excl))
+        morfs = list(find_files(dirs, match='*.py', exclude=excl))
         _coverobj.combine()
         if options.coverage:
             _coverobj.report(morfs=morfs)
