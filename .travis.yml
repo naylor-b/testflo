@@ -32,7 +32,7 @@ install:
 script:
 - testflo . --coverage --coverpkg testflo
 - ls -ltra
-- cat .coverage
+- cat .coverage*
 
 after_success:
 - coveralls debug
