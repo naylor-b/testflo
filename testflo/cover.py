@@ -16,6 +16,7 @@ except ImportError:
 _coverobj = None
 
 def setup_coverage(options):
+    print "setup coverage..."
     global _coverobj
     if _coverobj is None and (options.coverage or options.coveragehtml):
         if not coverage:
@@ -27,18 +28,24 @@ def setup_coverage(options):
     return _coverobj
 
 def start_coverage():
+    print "starting coverage..."
     if _coverobj:
         _coverobj.start()
 
 def stop_coverage():
+    print "stopping coverage..."
     if _coverobj:
         _coverobj.stop()
 
 def save_coverage():
+    print "saving coverage..."
     if _coverobj:
         _coverobj.save()
+    import subprocess
+    subprocess.call(["ls", "-ltra"])
 
 def finalize_coverage(options):
+    print "finalizing coverage..."
     if _coverobj:
         from testflo.util import find_files, find_module
         excl = lambda n: (n.startswith('test_') and n.endswith('.py')) or \
