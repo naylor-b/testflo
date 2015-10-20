@@ -62,7 +62,8 @@ def finalize_coverage(options):
 
         morfs = list(find_files(dirs, match='*.py', exclude=excl))
         _coverobj.combine()
-        _coverobj.save()
+        data = _coverobj.get_data()
+        data.write_file('.coverage')  # needed for coveralls
         if options.coverage:
             _coverobj.report(morfs=morfs)
         else:
