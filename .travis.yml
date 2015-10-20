@@ -6,7 +6,6 @@ branches:
 
 os:
   - linux
-  - osx
 
 language: generic
 
@@ -30,7 +29,10 @@ install:
 - pip install coveralls
 - pip install .
 
-script: testflo . --coverage --coverpkg testflo
+script:
+- testflo . --coverage --coverpkg testflo
+- ls -ltra
+- more .coverage
 
 after_success:
   coveralls debug
