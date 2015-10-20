@@ -32,8 +32,7 @@ install:
 script:
 - testflo . --coverage --coverpkg testflo
 - ls -ltra
-- more testflo/cover.py
-- more .coverage
+- cat .coverage
 
 after_success:
   coveralls debug
