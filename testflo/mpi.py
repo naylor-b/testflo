@@ -1,3 +1,6 @@
+"""
+Method and class for running tests under MPI.
+"""
 
 import sys
 import os
@@ -6,13 +9,10 @@ import time
 import subprocess
 from tempfile import TemporaryFile
 
-from mpi4py import MPI
-
-
-from testflo.runner import TestRunner, parse_test_path, \
-                           exit_codes
+from testflo.runner import parse_test_path, exit_codes
 from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.result import TestResult
+
 
 def run_mpi(testspec, nprocs, args):
     """This runs the test using mpirun in a subprocess,

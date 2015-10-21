@@ -1,3 +1,6 @@
+"""
+Methods for running tests serially or concurrently.
+"""
 
 import os
 import sys
@@ -8,14 +11,13 @@ import inspect
 
 from six import advance_iterator
 from six.moves import cStringIO
-from types import FunctionType, MethodType
+from types import FunctionType
 from multiprocessing import Queue, Process
 
 from testflo.util import get_module, ismethod
 from testflo.cover import setup_coverage, start_coverage, stop_coverage, \
                           save_coverage
-from testflo.profile import setup_profile, start_profile, stop_profile, \
-                          save_profile
+from testflo.profile import start_profile, stop_profile, save_profile
 import testflo.profile
 from testflo.result import TestResult
 from testflo.devnull import DevNull
@@ -136,11 +138,10 @@ def worker(runner, test_queue, done_queue, worker_id):
                            traceback.format_exc()))
 
     # don't save anything unless we actually ran a test
-    print 'worker test_count', test_count, 'saving coverage?'
     if test_count > 0:
-        print 'worker test_count', test_count, 'saving coverage!'
         save_coverage()
         save_profile()
+
 
 class TestRunner(object):
     def __init__(self, options):
@@ -157,7 +158,6 @@ class TestRunner(object):
             if self.stop and result.status == 'FAIL':
                 break
 
-        print 'TestRunner test_count', 'saving coverage'
         save_coverage()
 
     def get_test_parent(self, mod, testcase_class, method):

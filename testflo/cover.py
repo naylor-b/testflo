@@ -16,7 +16,6 @@ except ImportError:
 _coverobj = None
 
 def setup_coverage(options):
-    print "setup coverage..."
     global _coverobj
     if _coverobj is None and (options.coverage or options.coveragehtml):
         if not coverage:
@@ -28,24 +27,18 @@ def setup_coverage(options):
     return _coverobj
 
 def start_coverage():
-    print "starting coverage..."
     if _coverobj:
         _coverobj.start()
 
 def stop_coverage():
-    print "stopping coverage..."
     if _coverobj:
         _coverobj.stop()
 
 def save_coverage():
-    print "saving coverage..."
     if _coverobj:
         _coverobj.save()
-    import subprocess
-    subprocess.call(["ls", "-ltra"])
 
 def finalize_coverage(options):
-    print "finalizing coverage..."
     if _coverobj and options.coverpkgs:
         rank = 0
         if options.isolated:
@@ -72,8 +65,8 @@ def finalize_coverage(options):
 
             _coverobj.combine()
 
-            # write combined data to default filename (needed for coveralls)
-            # (NOTE: get_data() should prob be used here, but it returns None)
+            # write combined data to default filename (as used by coveralls)
+            # (NOTE: get_data() returns None, so using data attribute)
             _coverobj.data.write_file('.coverage')
 
             if options.coverage:

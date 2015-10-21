@@ -103,6 +103,7 @@ skip_dirs=site-packages,
                 return True
         return False
 
+    # print(os.getpid(), 'main() setup coverage')
     setup_coverage(options)
     setup_profile(options)
 

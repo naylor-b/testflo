@@ -1,4 +1,3 @@
-
 """
 This is for running a test in a subprocess.
 """
@@ -13,6 +12,8 @@ from tempfile import TemporaryFile
 from testflo.util import _get_parser
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
+from testflo.cover import save_coverage
+
 
 def run_isolated(testspec, args):
     """This runs the test in a subprocess,
@@ -96,6 +97,8 @@ if __name__ == '__main__':
         if result.status != 'OK':
             sys.stderr.write(result.err_msg)
             exitcode = exit_codes[result.status]
+
+        save_coverage()
 
     except:
         sys.stderr.write(traceback.format_exc())
