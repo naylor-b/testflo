@@ -1,4 +1,3 @@
-
 """
 This is for running a test in a subprocess.
 """
@@ -13,6 +12,8 @@ from tempfile import TemporaryFile
 from testflo.util import _get_parser
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
+from testflo.cover import save_coverage
+
 
 def run_isolated(testspec, args):
     """This runs the test in a subprocess,
@@ -66,7 +67,7 @@ class IsolatedTestRunner(TestRunner):
         super(IsolatedTestRunner, self).__init__(options)
         self.get_iter = self.run_isolated_tests
         self.options = options
-        self.args = [a for a in args if a.startswith('-')]
+        self.args = [a for a in args if a not in options.tests]
 
     def run_isolated_tests(self, input_iter):
         """Run each test isolated in a separate process."""
@@ -92,10 +93,12 @@ if __name__ == '__main__':
         options = _get_parser().parse_args()
         runner = TestRunner(options)
         for result in runner.get_iter([options.tests[0]]):
-             break
+            break
         if result.status != 'OK':
             sys.stderr.write(result.err_msg)
             exitcode = exit_codes[result.status]
+
+        save_coverage()
 
     except:
         sys.stderr.write(traceback.format_exc())

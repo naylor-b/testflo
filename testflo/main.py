@@ -28,8 +28,7 @@ from testflo.result import ResultPrinter, ResultSummary, TestResult
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser, \
-                         find_files, find_module
+from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 
@@ -113,11 +112,9 @@ skip_dirs=site-packages,
         ]
 
         if options.dryrun:
-            pipeline.extend(
-                [
-                    dryrun,
-                ]
-            )
+            pipeline.extend([
+                dryrun,
+            ])
         else:
             if options.isolated:
                 try:
@@ -132,15 +129,13 @@ skip_dirs=site-packages,
 
             pipeline.append(runner.get_iter)
 
-            pipeline.extend(
-            [
+            pipeline.extend([
                 ResultPrinter(verbose=options.verbose).get_iter,
                 ResultSummary().get_iter,
             ])
             if not options.noreport:
                 # mirror results and summary to a report file
-                pipeline.extend(
-                [
+                pipeline.extend([
                     ResultPrinter(report, verbose=options.verbose).get_iter,
                     ResultSummary(report).get_iter,
                 ])

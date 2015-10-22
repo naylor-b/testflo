@@ -3,9 +3,6 @@ Methods to provide code profiling using cProfile.
 """
 import os
 import cProfile
-import pstats
-import fnmatch
-import webbrowser
 
 from testflo.pstats_viewer import view_pstats
 
