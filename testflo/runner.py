@@ -1,5 +1,5 @@
 """
-Methods for running tests serially or concurrently.
+Methods and class for running tests serially or concurrently.
 """
 
 import os
