@@ -2,7 +2,10 @@
 Methods to provide code profiling using cProfile.
 """
 import os
-import cProfile
+try:
+    import cProfile
+except:
+    import profile as cProfile
 
 from testflo.pstats_viewer import view_pstats
 
