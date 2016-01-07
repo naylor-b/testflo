@@ -24,7 +24,17 @@ def run_mpi(testspec, nprocs, args):
         start = time.time()
         ferr = TemporaryFile(mode='w+t')
 
-        cmd = ['mpirun', '-n', str(nprocs),
+        from distutils import spawn
+        mpirun_exe = None
+        if spawn.find_executable("mpirun") is not None:
+            mpirun_exe = "mpirun"
+        elif spawn.find_executable("mpiexec") is not None:
+            mpirun_exe = "mpiexec"
+
+        if mpirun_exe is None:
+            raise Exception("mpirun or mpiexec was not found in the system path.")
+
+        cmd = [mpirun_exe, '-n', str(nprocs),
                sys.executable,
                os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                testspec]
