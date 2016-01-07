@@ -286,6 +286,8 @@ def read_config_file(cfgfile, options):
         skips = config.get('testflo', 'skip_dirs')
         options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
 
+    if config.has_option('testflo', 'num_procs'):
+        options.num_procs = int(config.get('testflo', 'num_procs'))
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

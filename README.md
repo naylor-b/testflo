@@ -22,14 +22,12 @@ arguments.
 Operating Systems
 -----------------
 
-Most testing has been done on linux, but testflo has also been used 
-successuflly on Windows and OS X.
+testflo has been tested on linux, Windows and OS X.
 
 Python Versions
 ---------------
 
-Most testing has been done under python 2.7, but some has now been done under
-python 3.4 as well.
+testflo has been tested with python 2.7 and python 3.5.
 
 You can install testflo directly from github using the following command:
 
@@ -37,6 +35,3 @@ You can install testflo directly from github using the following command:
 
 If you try it out and find any problems, submit them as issues on github at
 https://github.com/naylor-b/testflo.
-
-
-

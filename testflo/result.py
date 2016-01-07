@@ -92,8 +92,9 @@ class ResultPrinter(object):
 class ResultSummary(object):
     """Writes a test summary after all tests are run."""
 
-    def __init__(self, stream=sys.stdout):
+    def __init__(self, options, stream=sys.stdout):
         self.stream = stream
+        self.options = options
         self._start_time = time.time()
 
     def get_iter(self, input_iter):
@@ -101,6 +102,7 @@ class ResultSummary(object):
         total = 0
         fails = []
         skips = []
+        test_sum_time = 0.
 
         write = self.stream.write
 
@@ -109,8 +111,10 @@ class ResultSummary(object):
 
             if test.status == 'OK':
                 oks += 1
+                test_sum_time += (test.end_time-test.start_time)
             elif test.status == 'FAIL':
                 fails.append(test.short_name())
+                test_sum_time += (test.end_time-test.start_time)
             elif test.status == 'SKIP':
                 skips.append(test.short_name())
             yield test
@@ -135,6 +139,9 @@ class ResultSummary(object):
 
         wallclock = time.time() - self._start_time
 
-        s = "s" if total > 1 else ""
-        write("\n\nRan %d test%s  (elapsed time: %s)\n\n" %
-                          (total, s, elapsed_str(wallclock)))
+        s = "" if total == 1 else "s"
+        write("\n\nRan %d test%s using %d processes\nSum of test times: %s\n"
+              "Wall clock time:   %s\nSpeedup: %f\n\n" %
+                      (total, s, self.options.num_procs,
+                       elapsed_str(test_sum_time), elapsed_str(wallclock),
+                       test_sum_time/wallclock))
