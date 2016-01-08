@@ -140,8 +140,12 @@ class ResultSummary(object):
         wallclock = time.time() - self._start_time
 
         s = "" if total == 1 else "s"
-        write("\n\nRan %d test%s using %d processes\nSum of test times: %s\n"
+        if not self.options.isolated:
+            procstr = " using %d processes" % self.options.num_procs
+        else:
+            procstr = ""
+        write("\n\nRan %d test%s%s\nSum of test times: %s\n"
               "Wall clock time:   %s\nSpeedup: %f\n\n" %
-                      (total, s, self.options.num_procs,
+                      (total, s, procstr,
                        elapsed_str(test_sum_time), elapsed_str(wallclock),
                        test_sum_time/wallclock))
