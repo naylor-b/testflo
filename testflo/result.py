@@ -2,6 +2,7 @@ import os
 import sys
 import time
 
+
 def elapsed_str(elapsed):
     """return a string of the form hh:mm:sec"""
     hrs = int(elapsed/3600)
@@ -11,6 +12,13 @@ def elapsed_str(elapsed):
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
 
+def mem_str(rusage):
+    if rusage is None:
+        return ''
+    else:
+        return str(rusage.ru_maxrss/1000.0) + ' MB'
+
+
 class TestResult(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
@@ -18,12 +26,13 @@ class TestResult(object):
     """
 
     def __init__(self, testspec, start_time, end_time,
-                 status='OK', err_msg=''):
+                 status='OK', err_msg='', rusage=None):
         self.testspec = testspec
         self.status = status
         self.err_msg = err_msg
         self.start_time = start_time
         self.end_time = end_time
+        self.rusage = rusage
 
     def elapsed(self):
         return self.end_time - self.start_time
@@ -63,9 +72,10 @@ class ResultPrinter(object):
     def _print_result(self, result):
         stream = self.stream
         if self.verbose:
-            stream.write("%s ... %s (%s)\n%s" % (result.testspec,
+            stream.write("%s ... %s (%s, %s)\n%s" % (result.testspec,
                                                    result.status,
                                                    elapsed_str(result.elapsed()),
+                                                   mem_str(result.rusage),
                                                    result.err_msg))
             if result.err_msg:
                 stream.write("\n")
@@ -81,6 +91,7 @@ class ResultPrinter(object):
                 stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
                                                          result.status,
                                                          elapsed_str(result.elapsed()),
+                                                         mem_str(result.rusage),
                                                          result.err_msg))
             elif result.status == 'SKIP':
                 stream.write("\n%s: SKIP: %s\n" % (result.short_name(),

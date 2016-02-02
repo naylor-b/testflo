@@ -5,7 +5,7 @@ them through a pipeline of iterators that operate on them and transform them
 into TestResult objects, then pass them on to other objects in the pipeline.
 
 The objects passed through the pipline are either strings that
-indicate which test to run (test specifiers), or TestReult
+indicate which test to run (test specifiers), or TestResult
 objects, which contain only the test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
@@ -74,8 +74,8 @@ def main(args=None):
 
     options.skip_dirs = []
 
-    # read user prefs from ~/.testflo file.  create one if it
-    # isn't there
+    # read user prefs from ~/.testflo file.
+    # create one if it doesn't exist
     homedir = os.path.expanduser('~')
     rcfile = os.path.join(homedir, '.testflo')
     if not os.path.isfile(rcfile):
@@ -85,7 +85,7 @@ skip_dirs=site-packages,
     dist-packages,
     build,
     contrib
-""" )
+""")
     read_config_file(rcfile, options)
     if options.cfg:
         read_config_file(options.cfg, options)

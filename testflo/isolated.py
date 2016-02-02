@@ -7,6 +7,8 @@ import os
 import traceback
 import time
 import subprocess
+import resource
+
 from tempfile import TemporaryFile
 
 from testflo.util import _get_parser
@@ -43,6 +45,7 @@ def run_isolated(testspec, args):
 
         result = TestResult(testspec, start, end,
                             status, ferr.read())
+        result.rusage = resource.getrusage(resource.RUSAGE_SELF)
 
     except:
         # we generally shouldn't get here, but just in case,
