@@ -8,7 +8,6 @@ import traceback
 import time
 import unittest
 import inspect
-import resource
 
 from six import advance_iterator
 from six.moves import cStringIO
@@ -130,9 +129,7 @@ def worker(runner, test_queue, done_queue, worker_id):
     for testspec in iter(test_queue.get, 'STOP'):
         try:
             test_count += 1
-            result = runner.run_testspec(testspec)
-            result.rusage = resource.getrusage(resource.RUSAGE_SELF)
-            done_queue.put(result)
+            done_queue.put(runner.run_testspec(testspec))
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the

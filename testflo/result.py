@@ -12,27 +12,28 @@ def elapsed_str(elapsed):
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
 
-def mem_str(rusage):
-    if rusage is None:
+def mem_str(pdata):
+    if pdata is None:
         return ''
     else:
-        return str(rusage.ru_maxrss/1000.0) + ' MB'
+        return str(pdata['ru_maxrss']/1000.0) + ' MB'
 
 
 class TestResult(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
-    and start/end times.
+    start/end times and optionally data about the process in
+    which the test was run (e.g. memory usage).
     """
 
     def __init__(self, testspec, start_time, end_time,
-                 status='OK', err_msg='', rusage=None):
+                 status='OK', err_msg='', pdata=None):
         self.testspec = testspec
         self.status = status
         self.err_msg = err_msg
         self.start_time = start_time
         self.end_time = end_time
-        self.rusage = rusage
+        self.pdata = pdata
 
     def elapsed(self):
         return self.end_time - self.start_time
@@ -71,12 +72,17 @@ class ResultPrinter(object):
 
     def _print_result(self, result):
         stream = self.stream
+
+        if result.pdata is not None:
+            stats = elapsed_str(result.elapsed()) + ', ' + mem_str(result.pdata)
+        else:
+            stats = elapsed_str(result.elapsed())
+
         if self.verbose:
-            stream.write("%s ... %s (%s, %s)\n%s" % (result.testspec,
-                                                   result.status,
-                                                   elapsed_str(result.elapsed()),
-                                                   mem_str(result.rusage),
-                                                   result.err_msg))
+            stream.write("%s ... %s (%s)\n%s" % (result.testspec,
+                                                 result.status,
+                                                 stats,
+                                                 result.err_msg))
             if result.err_msg:
                 stream.write("\n")
         elif result.status == 'OK':
@@ -90,8 +96,7 @@ class ResultPrinter(object):
             if result.status == 'FAIL':
                 stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
                                                          result.status,
-                                                         elapsed_str(result.elapsed()),
-                                                         mem_str(result.rusage),
+                                                         stats,
                                                          result.err_msg))
             elif result.status == 'SKIP':
                 stream.write("\n%s: SKIP: %s\n" % (result.short_name(),
@@ -151,10 +156,10 @@ class ResultSummary(object):
         wallclock = time.time() - self._start_time
 
         s = "" if total == 1 else "s"
-        if not self.options.isolated:
-            procstr = " using %d processes" % self.options.num_procs
+        if self.options.isolated:
+            procstr = " in isolated processes"
         else:
-            procstr = ""
+            procstr = " using %d processes" % self.options.num_procs
         write("\n\nRan %d test%s%s\nSum of test times: %s\n"
               "Wall clock time:   %s\nSpeedup: %f\n\n" %
                       (total, s, procstr,

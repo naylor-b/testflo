@@ -85,6 +85,10 @@ def _get_parser():
                         default=4242, type=int,
                         help='Port used for profile viewer server.')
 
+    parser.add_argument('-b', '--benchmark', action='store_true', dest='benchmark',
+                        help='Specifies that benchmarks are to be run rather '
+                             'than tests.')
+
     parser.add_argument('--noreport', action='store_true', dest='noreport',
                         help="Don't create a test results file.")
 

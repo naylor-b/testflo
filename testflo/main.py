@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import os
 import sys
+import six
 import time
 
 from fnmatch import fnmatch
@@ -107,8 +108,16 @@ skip_dirs=site-packages,
     setup_profile(options)
 
     with open(options.outfile, 'w') as report:
+        if options.benchmark:
+            discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
+                                        func_pattern=six.text_type('benchmark*'),
+                                        dir_exclude=dir_exclude)
+            options.isolated = True
+        else:
+            discoverer = TestDiscoverer(dir_exclude=dir_exclude)
+
         pipeline = [
-            TestDiscoverer(dir_exclude=dir_exclude).get_iter,
+            discoverer.get_iter,
         ]
 
         if options.dryrun:
