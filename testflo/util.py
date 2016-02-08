@@ -88,6 +88,9 @@ def _get_parser():
     parser.add_argument('-b', '--benchmark', action='store_true', dest='benchmark',
                         help='Specifies that benchmarks are to be run rather '
                              'than tests.')
+    parser.add_argument('-d', '--datafile', action='store', dest='benchmarkfile',
+                        metavar='DATAFILE', default='benchmark_data.csv',
+                        help='Name of benchmark data file.  Default is benchmark_data.csv.')
 
     parser.add_argument('--noreport', action='store_true', dest='noreport',
                         help="Don't create a test results file.")

@@ -165,3 +165,29 @@ class ResultSummary(object):
                       (total, s, procstr,
                        elapsed_str(test_sum_time), elapsed_str(wallclock),
                        test_sum_time/wallclock))
+
+
+class BenchmarkWriter(object):
+    """Writes benchmark data to a file for postprocessing.
+       Data is written as comma separated values (CSV)
+    """
+
+    def __init__(self, stream=sys.stdout):
+        self.timestamp = time.time()
+        self.stream = stream
+
+    def get_iter(self, input_iter):
+        for result in input_iter:
+            self._write_data(result)
+            yield result
+
+    def _write_data(self, result):
+        stream = self.stream
+        stream.write('%d,%s,%s,%f,%f\n' % (
+            self.timestamp,
+            result.testspec,
+            result.status,
+            result.elapsed(),
+            result.pdata['ru_maxrss']/1000.0
+        ))
+        stream.flush()

@@ -1,6 +1,4 @@
 
-import os
-import sys
 import traceback
 import inspect
 import unittest

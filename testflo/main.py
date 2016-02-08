@@ -25,7 +25,7 @@ from fnmatch import fnmatch
 
 from testflo.runner import ConcurrentTestRunner
 from testflo.isolated import IsolatedTestRunner
-from testflo.result import ResultPrinter, ResultSummary, TestResult
+from testflo.result import BenchmarkWriter, ResultPrinter, ResultSummary, TestResult
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
@@ -107,7 +107,12 @@ skip_dirs=site-packages,
     setup_coverage(options)
     setup_profile(options)
 
-    with open(options.outfile, 'w') as report:
+    if options.benchmark:
+        benchmark_file = open(options.benchmarkfile, 'a')
+    else:
+        benchmark_file = None
+
+    with open(options.outfile, 'w') as report, benchmark_file as bdata:
         if options.benchmark:
             discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
                                         func_pattern=six.text_type('benchmark*'),
@@ -137,6 +142,11 @@ skip_dirs=site-packages,
                 runner = ConcurrentTestRunner(options)
 
             pipeline.append(runner.get_iter)
+
+            if options.benchmark:
+                pipeline.extend([
+                    BenchmarkWriter(stream=bdata).get_iter,
+                ])
 
             pipeline.extend([
                 ResultPrinter(verbose=options.verbose).get_iter,
