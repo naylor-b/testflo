@@ -14,12 +14,8 @@ with open('benchmark_data.csv', 'r') as csvfile:
         benchmarks[spec].setdefault('elapsed', []).append(row[3])
         benchmarks[spec].setdefault('maxrss', []).append(row[4])
 
-from pprint import pprint
-pprint(benchmarks)
-
 for spec, data in benchmarks.items():
     timestamp = np.array(data['timestamp'])
-    # status    = np.array(data['status'])
     elapsed   = np.array(data['elapsed'])
     maxrss    = np.array(data['maxrss'])
 
