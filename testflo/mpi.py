@@ -7,6 +7,7 @@ import os
 import traceback
 import time
 import subprocess
+import json
 from tempfile import TemporaryFile
 
 from testflo.runner import parse_test_path, exit_codes
@@ -20,8 +21,11 @@ def run_mpi(testspec, nprocs, args):
     """
 
     ferr = None
+    info = {}
+
     try:
         start = time.time()
+
         ferr = TemporaryFile(mode='w+t')
 
         from distutils import spawn
@@ -50,9 +54,13 @@ def run_mpi(testspec, nprocs, args):
             status = 'FAIL'
 
         ferr.seek(0)
+        with ferr:
+            s = ferr.read()
+        if s and s.startswith('{'):
+            info = json.loads(s)
 
-        result = TestResult(testspec, start, end,
-                            status, ferr.read())
+        result = TestResult(testspec, start, end, status,
+                            info.get('err_msg', ''), info.get('rdata', {}))
 
     except:
         # we generally shouldn't get here, but just in case,

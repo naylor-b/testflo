@@ -12,28 +12,20 @@ def elapsed_str(elapsed):
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
 
-def mem_str(pdata):
-    if pdata is None:
-        return ''
-    else:
-        return str(pdata['ru_maxrss']/1000.0) + ' MB'
-
-
 class TestResult(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
-    start/end times and optionally data about the process in
-    which the test was run (e.g. memory usage).
+    start/end times and optionally resource usage data.
     """
 
     def __init__(self, testspec, start_time, end_time,
-                 status='OK', err_msg='', pdata=None):
+                 status='OK', err_msg='', rdata={}):
         self.testspec = testspec
         self.status = status
         self.err_msg = err_msg
         self.start_time = start_time
         self.end_time = end_time
-        self.pdata = pdata
+        self.rdata = rdata
 
     def elapsed(self):
         return self.end_time - self.start_time
@@ -73,10 +65,9 @@ class ResultPrinter(object):
     def _print_result(self, result):
         stream = self.stream
 
-        if result.pdata is not None:
-            stats = elapsed_str(result.elapsed()) + ', ' + mem_str(result.pdata)
-        else:
-            stats = elapsed_str(result.elapsed())
+        stats = elapsed_str(result.elapsed())
+        if 'ru_maxrss' in result.rdata:
+            stats = stats + ', ' + str(result.rdata['ru_maxrss']/1000.0) + ' MB'
 
         if self.verbose:
             stream.write("%s ... %s (%s)\n%s" % (result.testspec,
@@ -188,6 +179,6 @@ class BenchmarkWriter(object):
             result.testspec,
             result.status,
             result.elapsed(),
-            result.pdata['ru_maxrss']/1000.0
+            result.rdata.get('ru_maxrss', 0)/1000.0
         ))
         stream.flush()

@@ -8,11 +8,11 @@ import traceback
 import time
 import subprocess
 import resource
-import ast
+import json
 
 from tempfile import TemporaryFile
 
-from testflo.util import _get_parser
+from testflo.util import _get_parser, attr_dict
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
 from testflo.cover import save_coverage
@@ -23,28 +23,20 @@ def run_isolated(testspec, args):
     then returns the TestResult object.
     """
 
-    fout = None
     ferr = None
-    pdata = None
 
     try:
         start = time.time()
 
-        fout = TemporaryFile(mode='w+t')
         ferr = TemporaryFile(mode='w+t')
 
         cmd = [sys.executable,
                os.path.join(os.path.dirname(__file__), 'isolated.py'),
                testspec]
         cmd = cmd+args
-        p = subprocess.Popen(cmd, stdout=fout, stderr=ferr, env=os.environ)
+        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
         p.wait()
         end = time.time()
-
-        fout.seek(0)
-        with fout:
-            s = fout.read()
-            pdata = ast.literal_eval(s)
 
         for status, val in exit_codes.items():
             if val == p.returncode:
@@ -53,18 +45,21 @@ def run_isolated(testspec, args):
             status = 'FAIL'
 
         ferr.seek(0)
+        with ferr:
+            s = ferr.read()
+        if s:
+            info = json.loads(s)
 
-        result = TestResult(testspec, start, end,
-                            status, ferr.read(), pdata)
+        result = TestResult(testspec, start, end, status,
+                            info.get('err_msg', ''), info.get('rdata', {}))
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
-                            traceback.format_exc(), pdata)
+                            traceback.format_exc())
 
     finally:
-        sys.stdout.flush()
         sys.stderr.flush()
         if ferr:
             ferr.close()
@@ -97,14 +92,10 @@ class IsolatedTestRunner(TestRunner):
                 yield run_isolated(testspec, self.args)
 
 
-def attr_dict(x):
-    """returns the non-underscored attributes of the object as a dictionary."""
-    return dict((key, getattr(x, key)) for key in dir(x) if not key.startswith('__'))
-
-
 if __name__ == '__main__':
 
     exitcode = 0
+    info = {}
 
     try:
         options = _get_parser().parse_args()
@@ -112,20 +103,22 @@ if __name__ == '__main__':
         for result in runner.get_iter([options.tests[0]]):
             break
 
-        # write process data to stdout
-        print attr_dict(resource.getrusage(resource.RUSAGE_SELF))
+        # collect resource usage data
+        info['rdata'] = attr_dict(resource.getrusage(resource.RUSAGE_SELF))
 
+        # check for error and write error message to stderr
         if result.status != 'OK':
-            sys.stderr.write(result.err_msg)
+            info['err_msg'] = result.err_msg
             exitcode = exit_codes[result.status]
 
         save_coverage()
 
     except:
-        sys.stderr.write(traceback.format_exc())
+        info['err_msg'] = traceback.format_exc()
         exitcode = exit_codes['FAIL']
 
     finally:
-        sys.stdout.flush()
+        sys.stderr.write(json.dumps(info))
         sys.stderr.flush()
+        sys.stdout.flush()
         sys.exit(exitcode)

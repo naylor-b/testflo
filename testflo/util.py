@@ -124,7 +124,6 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
         for name in [f for f in filelist if fmatch(f)]:
             yield join(path, name)
 
-
 def find_files(start, match=None, exclude=None,
                dirmatch=None, direxclude=None):
     """Return filenames (using a generator).
@@ -295,6 +294,10 @@ def read_config_file(cfgfile, options):
 
     if config.has_option('testflo', 'num_procs'):
         options.num_procs = int(config.get('testflo', 'num_procs'))
+
+def attr_dict(x):
+    """returns the non-underscored attributes of the object as a dictionary."""
+    return dict((key, getattr(x, key)) for key in dir(x) if not key.startswith('__'))
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

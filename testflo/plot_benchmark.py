@@ -1,6 +1,7 @@
 import csv
 import numpy as np
-import matplotlib.pyplot as plt
+
+from matplotlib import pyplot
 
 benchmarks = {}
 
@@ -22,7 +23,7 @@ for spec, data in benchmarks.items():
     elapsed   = np.array(data['elapsed'])
     maxrss    = np.array(data['maxrss'])
 
-    fig, a1 = plt.subplots()
+    fig, a1 = pyplot.subplots()
     x = np.array(range(len(timestamp)))
 
     a1.plot(x, elapsed, 'b-')
@@ -37,5 +38,5 @@ for spec, data in benchmarks.items():
     for tl in a2.get_yticklabels():
         tl.set_color('r')
 
-    plt.title(spec)
-    plt.show()
+    pyplot.title(spec)
+    pyplot.show()
