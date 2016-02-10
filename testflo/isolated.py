@@ -24,6 +24,7 @@ def run_isolated(testspec, args):
     """
 
     ferr = None
+    info = {}
 
     try:
         start = time.time()
@@ -47,7 +48,7 @@ def run_isolated(testspec, args):
         ferr.seek(0)
         with ferr:
             s = ferr.read()
-        if s:
+        if s and s.startswith('{'):
             info = json.loads(s)
 
         result = TestResult(testspec, start, end, status,
@@ -106,7 +107,7 @@ if __name__ == '__main__':
         # collect resource usage data
         info['rdata'] = attr_dict(resource.getrusage(resource.RUSAGE_SELF))
 
-        # check for error and write error message to stderr
+        # check for error and record error message
         if result.status != 'OK':
             info['err_msg'] = result.err_msg
             exitcode = exit_codes[result.status]

@@ -108,19 +108,16 @@ skip_dirs=site-packages,
     setup_profile(options)
 
     if options.benchmark:
+        options.isolated = True
+        discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
+                                    func_pattern=six.text_type('benchmark*'),
+                                    dir_exclude=dir_exclude)
         benchmark_file = open(options.benchmarkfile, 'a')
     else:
-        benchmark_file = None
+        discoverer = TestDiscoverer(dir_exclude=dir_exclude)
+        benchmark_file = open(os.devnull, 'a')
 
     with open(options.outfile, 'w') as report, benchmark_file as bdata:
-        if options.benchmark:
-            discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
-                                        func_pattern=six.text_type('benchmark*'),
-                                        dir_exclude=dir_exclude)
-            options.isolated = True
-        else:
-            discoverer = TestDiscoverer(dir_exclude=dir_exclude)
-
         pipeline = [
             discoverer.get_iter,
         ]
