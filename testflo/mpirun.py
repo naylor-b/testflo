@@ -8,12 +8,11 @@ NOTE: Currently some tests run using this hang mysteriously.
 if __name__ == '__main__':
     import sys
     import traceback
-    import resource
     import json
 
     from mpi4py import MPI
     from testflo.main import _get_parser
-    from testflo.util import attr_dict
+    from testflo.util import get_memory_usage
     from testflo.runner import TestRunner, exit_codes
     from testflo.result import TestResult
     from testflo.cover import save_coverage
@@ -31,11 +30,11 @@ if __name__ == '__main__':
         except:
             print traceback.format_exc()
             result = TestResult(options.tests[0], 0., 0., 'FAIL',
-                                traceback.format_exc())
+                                {'err_msg': traceback.format_exc()})
 
         # collect resource usage data
-        rusage = attr_dict(resource.getrusage(resource.RUSAGE_SELF))
-        rusages = comm.gather(rusage, root=0)
+        memory_usage = get_memory_usage()
+        memory_usages = comm.gather(memory_usage, root=0)
 
         # collect results
         results = comm.gather(result, root=0)
@@ -43,10 +42,9 @@ if __name__ == '__main__':
         if comm.rank == 0:
             # sum all resource usage data
             rdata = {}
-            for r in rusages:
-                for key, val in r.items():
-                    rdata[key] = rdata.setdefault(key, 0) + val
-            info['rdata'] = rdata
+            info['memory_usage'] = 0
+            for mem in memory_usages:
+                info['memory_usage'] +=  mem
 
             # check for errors and record error message
             for r in results:

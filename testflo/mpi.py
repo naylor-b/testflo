@@ -59,15 +59,14 @@ def run_mpi(testspec, nprocs, args):
         if s and s.startswith('{'):
             info = json.loads(s)
 
-        result = TestResult(testspec, start, end, status,
-                            info.get('err_msg', ''), info.get('rdata', {}))
+        result = TestResult(testspec, start, end, status, info)
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
-                            traceback.format_exc())
+                            {'err_msg': traceback.format_exc()})
 
     finally:
         sys.stdout.flush()

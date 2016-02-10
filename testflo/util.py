@@ -295,9 +295,13 @@ def read_config_file(cfgfile, options):
     if config.has_option('testflo', 'num_procs'):
         options.num_procs = int(config.get('testflo', 'num_procs'))
 
-def attr_dict(x):
-    """returns the non-underscored attributes of the object as a dictionary."""
-    return dict((key, getattr(x, key)) for key in dir(x) if not key.startswith('__'))
+def get_memory_usage():
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        return process.memory_info().rss/1000000.
+    except:
+        return 0.
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

@@ -56,7 +56,7 @@ class TestDiscoverer(object):
             fname, mod = get_module(filename)
         except:
             yield TestResult(filename, 0, 0, 'FAIL',
-                             traceback.format_exc())
+                             {'err_msg': traceback.format_exc()})
         else:
             if basename(fname).startswith(six.text_type('__init__.')):
                 for result in self._dir_iter(dirname(fname)):
@@ -105,7 +105,8 @@ class TestDiscoverer(object):
                 try:
                     fname, mod = get_module(module)
                 except:
-                    yield TestResult(testspec, 0, 0, 'FAIL', traceback.format_exc())
+                    yield TestResult(testspec, 0, 0, 'FAIL',
+                                     {'err_msg': traceback.format_exc()})
                     return
                 try:
                     tcase = get_testcase(fname, mod, tcasename)

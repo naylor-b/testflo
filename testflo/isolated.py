@@ -7,12 +7,11 @@ import os
 import traceback
 import time
 import subprocess
-import resource
 import json
 
 from tempfile import TemporaryFile
 
-from testflo.util import _get_parser, attr_dict
+from testflo.util import _get_parser, get_memory_usage
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
 from testflo.cover import save_coverage
@@ -51,14 +50,13 @@ def run_isolated(testspec, args):
         if s and s.startswith('{'):
             info = json.loads(s)
 
-        result = TestResult(testspec, start, end, status,
-                            info.get('err_msg', ''), info.get('rdata', {}))
+        result = TestResult(testspec, start, end, status, info)
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
-                            traceback.format_exc())
+                            {'err_msg': traceback.format_exc()})
 
     finally:
         sys.stderr.flush()
@@ -104,10 +102,8 @@ if __name__ == '__main__':
         for result in runner.get_iter([options.tests[0]]):
             break
 
-        # collect resource usage data
-        info['rdata'] = attr_dict(resource.getrusage(resource.RUSAGE_SELF))
+        info['memory_usage'] = get_memory_usage()
 
-        # check for error and record error message
         if result.status != 'OK':
             info['err_msg'] = result.err_msg
             exitcode = exit_codes[result.status]

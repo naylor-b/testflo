@@ -19,13 +19,13 @@ class TestResult(object):
     """
 
     def __init__(self, testspec, start_time, end_time,
-                 status='OK', err_msg='', rdata={}):
+                 status='OK', info={}):
         self.testspec = testspec
         self.status = status
-        self.err_msg = err_msg
+        self.err_msg = info.get('err_msg', '')
         self.start_time = start_time
         self.end_time = end_time
-        self.rdata = rdata
+        self.memory_usage = info.get('memory_usage', 0)
 
     def elapsed(self):
         return self.end_time - self.start_time
@@ -66,8 +66,8 @@ class ResultPrinter(object):
         stream = self.stream
 
         stats = elapsed_str(result.elapsed())
-        if 'ru_maxrss' in result.rdata:
-            stats = stats + ', ' + str(result.rdata['ru_maxrss']/1000.0) + ' MB'
+        if result.memory_usage:
+            stats = stats + ', ' + str(result.memory_usage) + ' MB'
 
         if self.verbose:
             stream.write("%s ... %s (%s)\n%s" % (result.testspec,
@@ -179,6 +179,6 @@ class BenchmarkWriter(object):
             result.testspec,
             result.status,
             result.elapsed(),
-            result.rdata.get('ru_maxrss', 0)/1000.0
+            result.memory_usage
         ))
         stream.flush()
