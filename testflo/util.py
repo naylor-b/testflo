@@ -296,12 +296,19 @@ def read_config_file(cfgfile, options):
         options.num_procs = int(config.get('testflo', 'num_procs'))
 
 def get_memory_usage():
+    k = 1024
     try:
         import psutil
         process = psutil.Process(os.getpid())
-        return process.memory_info().rss/1000000.
-    except:
-        return 0.
+        return process.memory_info().rss/(k*k)
+    except ImportError:
+        import resource
+        mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        if sys.platform == 'darwin':
+            return mem/(k*k*k)
+        else:
+            return mem/(k*k)
+    return 0.
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
