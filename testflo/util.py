@@ -17,8 +17,7 @@ except ImportError:
     pass
 
 from fnmatch import fnmatch
-from os.path import join, dirname, basename, isfile, \
-                    abspath, split, splitext
+from os.path import join, dirname, basename, isfile,  abspath, split, splitext
 
 from argparse import ArgumentParser
 
@@ -96,9 +95,10 @@ def _get_parser():
                         help="Don't create a test results file.")
 
     parser.add_argument('tests', metavar='test', nargs='*',
-                       help='A test method, test case, module, or directory to run.')
+                        help='A test method, test case, module, or directory to run.')
 
     return parser
+
 
 def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
@@ -116,13 +116,14 @@ def _file_gen(dname, fmatch=bool, dmatch=None):
         return
 
     for path, dirlist, filelist in os.walk(dname):
-        if dmatch is not None: # prune directories to search
+        if dmatch is not None:  # prune directories to search
             newdl = [d for d in dirlist if dmatch(d)]
             if len(newdl) != len(dirlist):
-                dirlist[:] = newdl # replace contents of dirlist to cause pruning
+                dirlist[:] = newdl  # replace contents of dirlist to cause pruning
 
         for name in [f for f in filelist if fmatch(f)]:
             yield join(path, name)
+
 
 def find_files(start, match=None, exclude=None,
                dirmatch=None, direxclude=None):
@@ -196,6 +197,7 @@ def find_files(start, match=None, exclude=None,
     else:
         return iters[0]
 
+
 def get_module_path(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
@@ -210,15 +212,17 @@ def get_module_path(fpath):
             pnames.append(pname)
     return '.'.join(pnames[::-1])
 
+
 def parent_dirs(fpath):
     """Return a list of the absolute paths of the parent directory and
     each of its parent directories for the given file.
     """
     parts = abspath(fpath).split(os.path.sep)
     pdirs = []
-    for i in range(2,len(parts)):
+    for i in range(2, len(parts)):
         pdirs.append(os.path.sep.join(parts[:i]))
     return pdirs[::-1]
+
 
 def find_module(name):
     """Return the pathname of the Python file corresponding to the
@@ -238,6 +242,7 @@ def find_module(name):
             if isfile(f):
                 return f
     return None
+
 
 def get_module(fname):
     """Given a filename or module path name, return a tuple
@@ -276,6 +281,7 @@ def get_module(fname):
 
     return fname, sys.modules[modpath]
 
+
 def read_test_file(testfile):
     """Reads a file containing one testspec per line."""
     with open(os.path.abspath(testfile), 'r') as f:
@@ -283,6 +289,7 @@ def read_test_file(testfile):
             line = line.strip()
             if line:
                 yield line
+
 
 def read_config_file(cfgfile, options):
     config = ConfigParser()
@@ -295,20 +302,26 @@ def read_config_file(cfgfile, options):
     if config.has_option('testflo', 'num_procs'):
         options.num_procs = int(config.get('testflo', 'num_procs'))
 
+
 def get_memory_usage():
     k = 1024
     try:
+        # prefer psutil, it works on all platforms including Windows
         import psutil
         process = psutil.Process(os.getpid())
         return process.memory_info().rss/(k*k)
     except ImportError:
-        import resource
-        mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        if sys.platform == 'darwin':
-            return mem/(k*k*k)
-        else:
-            return mem/(k*k)
-    return 0.
+        try:
+            # fall back to getrusage, which works only on Linux and OSX
+            import resource
+            mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            if sys.platform == 'darwin':
+                return mem/(k*k*k)
+            else:
+                return mem/(k*k)
+        except:
+            return 0.
+
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
