@@ -17,8 +17,8 @@ if __name__ == '__main__':
     from testflo.result import TestResult
     from testflo.cover import save_coverage
 
-    exitcode = 0 # use 0 for exit code of all ranks != 0 because otherwise,
-                 # MPI will terminate other processes
+    exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
+                  # MPI will terminate other processes
     info = {}
 
     try:
@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     finally:
         if comm.rank == 0:
-            sys.stderr.write(json.dumps(info))
+            sys.stderr.write('TESTFLO_INFO='+json.dumps(info))
         sys.stderr.flush()
         sys.stdout.flush()
         sys.exit(exitcode)

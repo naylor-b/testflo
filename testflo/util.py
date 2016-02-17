@@ -7,6 +7,7 @@ import sys
 import itertools
 import inspect
 import warnings
+import json
 
 from six import string_types, PY3
 from six.moves.configparser import ConfigParser
@@ -304,23 +305,40 @@ def read_config_file(cfgfile, options):
 
 
 def get_memory_usage():
-    k = 1024
+    """return memory usage for the current process"""
+    k = 1024.
     try:
         # prefer psutil, it works on all platforms including Windows
         import psutil
         process = psutil.Process(os.getpid())
-        return process.memory_info().rss/(k*k)
+        mem = process.memory_info().rss
+        return mem/(k*k)
     except ImportError:
         try:
             # fall back to getrusage, which works only on Linux and OSX
             import resource
             mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
             if sys.platform == 'darwin':
-                return mem/(k*k*k)
-            else:
                 return mem/(k*k)
+            else:
+                return mem/k
         except:
             return 0.
+
+
+def get_info(s):
+    """extract the testflo info dictionary from a text string"""
+    info = {}
+    prefix = "TESTFLO_INFO="
+    beg = s.find(prefix)
+    if beg > 0:
+        beg = beg + len(prefix)
+        end = s.find('}', beg)
+        try:
+            info = json.loads(s[beg:end+1])
+        except Exception as err:
+            print "Unable to parse testflo info:", err
+    return info
 
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...

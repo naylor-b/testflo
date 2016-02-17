@@ -11,7 +11,7 @@ import json
 
 from tempfile import TemporaryFile
 
-from testflo.util import _get_parser, get_memory_usage
+from testflo.util import _get_parser, get_memory_usage, get_info
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
 from testflo.cover import save_coverage
@@ -47,8 +47,7 @@ def run_isolated(testspec, args):
         ferr.seek(0)
         with ferr:
             s = ferr.read()
-        if s and s.startswith('{'):
-            info = json.loads(s)
+        info = get_info(s)
 
         result = TestResult(testspec, start, end, status, info)
     except:
@@ -115,7 +114,7 @@ if __name__ == '__main__':
         exitcode = exit_codes['FAIL']
 
     finally:
-        sys.stderr.write(json.dumps(info))
+        sys.stderr.write('TESTFLO_INFO='+json.dumps(info))
         sys.stderr.flush()
         sys.stdout.flush()
         sys.exit(exitcode)

@@ -7,10 +7,10 @@ import os
 import traceback
 import time
 import subprocess
-import json
 from tempfile import TemporaryFile
 
 from testflo.runner import parse_test_path, exit_codes
+from testflo.util import get_info
 from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.result import TestResult
 
@@ -56,8 +56,7 @@ def run_mpi(testspec, nprocs, args):
         ferr.seek(0)
         with ferr:
             s = ferr.read()
-        if s and s.startswith('{'):
-            info = json.loads(s)
+        info = get_info(s)
 
         result = TestResult(testspec, start, end, status, info)
 
