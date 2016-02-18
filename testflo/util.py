@@ -331,7 +331,7 @@ def get_info(s):
     info = {}
     prefix = "TESTFLO_INFO="
     beg = s.find(prefix)
-    if beg > 0:
+    if beg >= 0:
         beg = beg + len(prefix)
         end = s.find('}', beg)
         try:
