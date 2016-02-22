@@ -12,8 +12,7 @@ if __name__ == '__main__':
     import json
 
     from mpi4py import MPI
-    from testflo.main import _get_parser
-    from testflo.util import get_memory_usage
+    from testflo.util import _get_parser, get_memory_usage
     from testflo.runner import TestRunner, exit_codes
     from testflo.result import TestResult
     from testflo.cover import save_coverage
@@ -62,6 +61,11 @@ if __name__ == '__main__':
         exitcode = exit_codes['FAIL']
 
     finally:
-        with open('testflo.%d' % os.getpid(), 'w') as f:
-            f.write(json.dumps(info))
+        if comm.rank == 0:
+            try:
+                with open('testflo.%d' % os.getppid(), 'w') as f:
+                    f.write(json.dumps(info))
+            except AttributeError:
+                # getppid() is not available on Windows with py27
+                pass
         sys.exit(exitcode)
