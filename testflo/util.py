@@ -326,21 +326,6 @@ def get_memory_usage():
             return 0.
 
 
-def get_info(s):
-    """extract the testflo info dictionary from a text string"""
-    info = {}
-    prefix = "TESTFLO_INFO="
-    beg = s.find(prefix)
-    if beg >= 0:
-        beg = beg + len(prefix)
-        end = s.find('}', beg)
-        try:
-            info = json.loads(s[beg:end+1])
-        except Exception as err:
-            print "Unable to parse testflo info:", err
-    return info
-
-
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
     def ismethod(obj):

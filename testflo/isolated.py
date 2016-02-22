@@ -9,9 +9,7 @@ import time
 import subprocess
 import json
 
-from tempfile import TemporaryFile
-
-from testflo.util import _get_parser, get_memory_usage, get_info
+from testflo.util import _get_parser, get_memory_usage
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
 from testflo.cover import save_coverage
@@ -22,19 +20,17 @@ def run_isolated(testspec, args):
     then returns the TestResult object.
     """
 
-    ferr = None
+    info_file = None
     info = {}
 
     try:
         start = time.time()
 
-        ferr = TemporaryFile(mode='w+t')
-
         cmd = [sys.executable,
                os.path.join(os.path.dirname(__file__), 'isolated.py'),
                testspec]
         cmd = cmd+args
-        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
+        p = subprocess.Popen(cmd, env=os.environ)
         p.wait()
         end = time.time()
 
@@ -44,12 +40,13 @@ def run_isolated(testspec, args):
         else:
             status = 'FAIL'
 
-        ferr.seek(0)
-        with ferr:
-            s = ferr.read()
-        info = get_info(s)
+        info_file = 'testflo.%d' % p.pid
+        with open(info_file, 'r') as f:
+            s = f.read()
+        info = json.loads(s)
 
         result = TestResult(testspec, start, end, status, info)
+
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
@@ -57,10 +54,11 @@ def run_isolated(testspec, args):
         result = TestResult(testspec, 0., 0., 'FAIL',
                             {'err_msg': traceback.format_exc()})
 
-    finally:
-        sys.stderr.flush()
-        if ferr:
-            ferr.close()
+    if info_file:
+        try:
+            os.remove(info_file)
+        except OSError:
+            pass
 
     return result
 
@@ -114,7 +112,6 @@ if __name__ == '__main__':
         exitcode = exit_codes['FAIL']
 
     finally:
-        sys.stderr.write('TESTFLO_INFO='+json.dumps(info))
-        sys.stderr.flush()
-        sys.stdout.flush()
+        with open('testflo.%d' % os.getpid(), 'w') as f:
+            f.write(json.dumps(info))
         sys.exit(exitcode)

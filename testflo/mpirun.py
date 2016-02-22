@@ -7,6 +7,7 @@ NOTE: Currently some tests run using this hang mysteriously.
 
 if __name__ == '__main__':
     import sys
+    import os
     import traceback
     import json
 
@@ -61,8 +62,6 @@ if __name__ == '__main__':
         exitcode = exit_codes['FAIL']
 
     finally:
-        if comm.rank == 0:
-            sys.stderr.write('TESTFLO_INFO='+json.dumps(info))
-        sys.stderr.flush()
-        sys.stdout.flush()
+        with open('testflo.%d' % os.getpid(), 'w') as f:
+            f.write(json.dumps(info))
         sys.exit(exitcode)
