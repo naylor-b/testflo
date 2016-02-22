@@ -46,7 +46,6 @@ def run_isolated(testspec, args):
         info = json.loads(s)
 
         result = TestResult(testspec, start, end, status, info)
-
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
@@ -112,6 +111,8 @@ if __name__ == '__main__':
         exitcode = exit_codes['FAIL']
 
     finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
         with open('testflo.%d' % os.getpid(), 'w') as f:
             f.write(json.dumps(info))
         sys.exit(exitcode)

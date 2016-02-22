@@ -61,6 +61,8 @@ if __name__ == '__main__':
         exitcode = exit_codes['FAIL']
 
     finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
         if comm.rank == 0:
             try:
                 with open('testflo.%d' % os.getppid(), 'w') as f:
