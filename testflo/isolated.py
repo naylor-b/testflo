@@ -46,12 +46,17 @@ def run_isolated(testspec, args):
         info = json.loads(s)
 
         result = TestResult(testspec, start, end, status, info)
+
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
                             {'err_msg': traceback.format_exc()})
+
+    finally:
+        sys.stdout.flush()
+        sys.stderr.flush()
 
     if info_file:
         try:
