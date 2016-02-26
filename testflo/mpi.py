@@ -7,7 +7,7 @@ import os
 import traceback
 import time
 import subprocess
-from tempfile import TemporaryFile
+import json
 
 from testflo.runner import parse_test_path, exit_codes
 from testflo.isolated import IsolatedTestRunner, run_isolated
@@ -19,10 +19,11 @@ def run_mpi(testspec, nprocs, args):
     then returns the TestResult object.
     """
 
-    ferr = None
+    info_file = None
+    info = {}
+
     try:
         start = time.time()
-        ferr = TemporaryFile(mode='w+t')
 
         from distutils import spawn
         mpirun_exe = None
@@ -39,7 +40,7 @@ def run_mpi(testspec, nprocs, args):
                os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                testspec]
         cmd = cmd+args
-        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
+        p = subprocess.Popen(cmd, env=os.environ)
         p.wait()
         end = time.time()
 
@@ -49,23 +50,29 @@ def run_mpi(testspec, nprocs, args):
         else:
             status = 'FAIL'
 
-        ferr.seek(0)
+        info_file = 'testflo.%d' % p.pid
+        with open(info_file, 'r') as f:
+            s = f.read()
+        info = json.loads(s)
 
-        result = TestResult(testspec, start, end,
-                            status, ferr.read())
+        result = TestResult(testspec, start, end, status, info)
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
-                            traceback.format_exc())
+                            {'err_msg': traceback.format_exc()})
 
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        if ferr:
-            ferr.close()
+
+    if info_file:
+        try:
+            os.remove(info_file)
+        except OSError:
+            pass
 
     return result
 

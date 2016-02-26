@@ -7,9 +7,9 @@ import os
 import traceback
 import time
 import subprocess
-from tempfile import TemporaryFile
+import json
 
-from testflo.util import _get_parser
+from testflo.util import _get_parser, get_memory_usage
 from testflo.runner import TestRunner, exit_codes
 from testflo.result import TestResult
 from testflo.cover import save_coverage
@@ -20,16 +20,17 @@ def run_isolated(testspec, args):
     then returns the TestResult object.
     """
 
-    ferr = None
+    info_file = None
+    info = {}
+
     try:
         start = time.time()
-        ferr = TemporaryFile(mode='w+t')
 
         cmd = [sys.executable,
                os.path.join(os.path.dirname(__file__), 'isolated.py'),
                testspec]
         cmd = cmd+args
-        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
+        p = subprocess.Popen(cmd, env=os.environ)
         p.wait()
         end = time.time()
 
@@ -39,23 +40,29 @@ def run_isolated(testspec, args):
         else:
             status = 'FAIL'
 
-        ferr.seek(0)
+        info_file = 'testflo.%d' % p.pid
+        with open(info_file, 'r') as f:
+            s = f.read()
+        info = json.loads(s)
 
-        result = TestResult(testspec, start, end,
-                            status, ferr.read())
+        result = TestResult(testspec, start, end, status, info)
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
-                            traceback.format_exc())
+                            {'err_msg': traceback.format_exc()})
 
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        if ferr:
-            ferr.close()
+
+    if info_file:
+        try:
+            os.remove(info_file)
+        except OSError:
+            pass
 
     return result
 
@@ -88,23 +95,29 @@ class IsolatedTestRunner(TestRunner):
 if __name__ == '__main__':
 
     exitcode = 0
+    info = {}
 
     try:
         options = _get_parser().parse_args()
         runner = TestRunner(options)
         for result in runner.get_iter([options.tests[0]]):
             break
+
+        info['memory_usage'] = get_memory_usage()
+
         if result.status != 'OK':
-            sys.stderr.write(result.err_msg)
+            info['err_msg'] = result.err_msg
             exitcode = exit_codes[result.status]
 
         save_coverage()
 
     except:
-        sys.stderr.write(traceback.format_exc())
+        info['err_msg'] = traceback.format_exc()
         exitcode = exit_codes['FAIL']
 
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
+        with open('testflo.%d' % os.getpid(), 'w') as f:
+            f.write(json.dumps(info))
         sys.exit(exitcode)

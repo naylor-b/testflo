@@ -135,7 +135,7 @@ def worker(runner, test_queue, done_queue, worker_id):
             # handle it so that the main process doesn't hang at the
             # end when it tries to join all of the concurrent processes.
             done_queue.put(TestResult(testspec, 0., 0., 'FAIL',
-                           traceback.format_exc()))
+                           {'err_msg': traceback.format_exc()}))
 
     # don't save anything unless we actually ran a test
     if test_count > 0:
@@ -180,10 +180,10 @@ class TestRunner(object):
             fname, mod, testcase, method = parse_test_path(test)
         except Exception:
             return TestResult(test, start_time, time.time(), 'FAIL',
-                              traceback.format_exc())
+                              {'err_msg': traceback.format_exc()})
         if method is None:
             return TestResult(test, start_time, time.time(), 'FAIL',
-                              'ERROR: test method not specified.')
+                              {'err_msg': 'ERROR: test method not specified.'})
 
         parent = self.get_test_parent(mod, testcase, method)
 
@@ -228,7 +228,7 @@ class TestRunner(object):
                     status = tdstatus
 
             result = TestResult(testspec, start_time, time.time(), status,
-                                errstream.getvalue())
+                                {'err_msg': errstream.getvalue()})
 
         finally:
             stop_coverage()
