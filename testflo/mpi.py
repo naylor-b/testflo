@@ -50,10 +50,14 @@ def run_mpi(testspec, nprocs, args):
         else:
             status = 'FAIL'
 
-        info_file = 'testflo.%d' % p.pid
-        with open(info_file, 'r') as f:
-            s = f.read()
-        info = json.loads(s)
+        try:
+            info_file = 'testflo.%d' % p.pid
+            with open(info_file, 'r') as f:
+                s = f.read()
+            info = json.loads(s)
+        except:
+            # fail silently if we can't get subprocess info
+            pass
 
         result = TestResult(testspec, start, end, status, info)
 
