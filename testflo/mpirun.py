@@ -28,7 +28,6 @@ if __name__ == '__main__':
             runner = TestRunner(options)
             result = runner.run_testspec(options.tests[0])
         except:
-            print traceback.format_exc()
             result = TestResult(options.tests[0], 0., 0., 'FAIL',
                                 {'err_msg': traceback.format_exc()})
 
