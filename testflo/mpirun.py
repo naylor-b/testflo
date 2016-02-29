@@ -2,7 +2,6 @@
 """
 This is meant to be executed using mpirun.
 
-NOTE: Currently some tests run using this hang mysteriously.
 """
 
 if __name__ == '__main__':

@@ -15,7 +15,7 @@ from testflo.result import TestResult
 from testflo.cover import save_coverage
 
 
-def run_isolated(testspec, args):
+def run_isolated(testspec, args, timeout):
     """This runs the test in a subprocess,
     then returns the TestResult object.
     """
@@ -30,7 +30,31 @@ def run_isolated(testspec, args):
                testspec]
         cmd = cmd+args
         p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
-        p.wait()
+
+        if timeout > 0.0:
+            pcount = 0
+            stime = 0.1
+            while p.poll() is None:
+                if pcount*stime > timeout:
+                    ferr.flush()
+                    ferr.seek(0)
+                    result = TestResult(testspec, start, time.time(),
+                                        'FAIL',
+                                        "Test timed out after %s sec. stderr "
+                                        "(may be truncated) = '%s'" %
+                                        (timeout, ferr.read()))
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    if ferr:
+                        ferr.close()
+                    p.kill()
+                    return result
+
+                time.sleep(stime)
+                pcount += 1
+        else:
+            p.wait()
+            
         end = time.time()
 
         for status, val in exit_codes.items():

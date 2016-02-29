@@ -14,7 +14,7 @@ from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.result import TestResult
 
 
-def run_mpi(testspec, nprocs, args):
+def run_mpi(testspec, nprocs, args, timeout):
     """This runs the test using mpirun in a subprocess,
     then returns the TestResult object.
     """
@@ -40,7 +40,31 @@ def run_mpi(testspec, nprocs, args):
                testspec]
         cmd = cmd+args
         p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
-        p.wait()
+
+        if timeout > 0.0:
+            pcount = 0
+            stime = 0.1
+            while p.poll() is None:
+                if pcount*stime > timeout:
+                    ferr.flush()
+                    ferr.seek(0)
+                    result = TestResult(testspec, start, time.time(),
+                                        'FAIL',
+                                        "Test timed out after %s sec. stderr "
+                                        "(may be truncated) = '%s'" %
+                                        (timeout, ferr.read()))
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    if ferr:
+                        ferr.close()
+                    p.kill()
+                    return result
+
+                time.sleep(stime)
+                pcount += 1
+        else:
+            p.wait()
+            
         end = time.time()
 
         for status, val in exit_codes.items():
@@ -84,6 +108,8 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
                 self.testcase = testcase
 
                 if testcase and hasattr(testcase, 'N_PROCS'):
-                    yield run_mpi(testspec, testcase.N_PROCS, self.args)
+                    yield run_mpi(testspec, testcase.N_PROCS, self.args,
+                                  self.options.timeout)
                 else:
-                    yield run_isolated(testspec, self.args)
+                    yield run_isolated(testspec, self.args,
+                                       self.options.timeout)
