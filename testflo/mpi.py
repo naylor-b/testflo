@@ -7,7 +7,7 @@ import os
 import traceback
 import time
 import subprocess
-from tempfile import TemporaryFile
+import json
 
 from testflo.runner import parse_test_path, exit_codes
 from testflo.isolated import IsolatedTestRunner, run_isolated
@@ -19,10 +19,11 @@ def run_mpi(testspec, nprocs, args, timeout):
     then returns the TestResult object.
     """
 
-    ferr = None
+    info_file = None
+    info = {}
+
     try:
         start = time.time()
-        ferr = TemporaryFile(mode='w+t')
 
         from distutils import spawn
         mpirun_exe = None
@@ -39,32 +40,10 @@ def run_mpi(testspec, nprocs, args, timeout):
                os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                testspec]
         cmd = cmd+args
-        p = subprocess.Popen(cmd, stderr=ferr, env=os.environ)
 
-        if timeout > 0.0:
-            pcount = 0
-            stime = 0.1
-            while p.poll() is None:
-                if pcount*stime > timeout:
-                    ferr.flush()
-                    ferr.seek(0)
-                    result = TestResult(testspec, start, time.time(),
-                                        'FAIL',
-                                        "Test timed out after %s sec. stderr "
-                                        "(may be truncated) = '%s'" %
-                                        (timeout, ferr.read()))
-                    sys.stdout.flush()
-                    sys.stderr.flush()
-                    if ferr:
-                        ferr.close()
-                    p.kill()
-                    return result
+        p = subprocess.Popen(cmd, env=os.environ)
+        p.wait()
 
-                time.sleep(stime)
-                pcount += 1
-        else:
-            p.wait()
-            
         end = time.time()
 
         for status, val in exit_codes.items():
@@ -73,23 +52,33 @@ def run_mpi(testspec, nprocs, args, timeout):
         else:
             status = 'FAIL'
 
-        ferr.seek(0)
+        try:
+            info_file = 'testflo.%d' % p.pid
+            with open(info_file, 'r') as f:
+                s = f.read()
+            info = json.loads(s)
+        except:
+            # fail silently if we can't get subprocess info
+            pass
 
-        result = TestResult(testspec, start, end,
-                            status, ferr.read())
+        result = TestResult(testspec, start, end, status, info)
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
         result = TestResult(testspec, 0., 0., 'FAIL',
-                            traceback.format_exc())
+                            {'err_msg': traceback.format_exc()})
 
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        if ferr:
-            ferr.close()
+
+    if info_file:
+        try:
+            os.remove(info_file)
+        except OSError:
+            pass
 
     return result
 

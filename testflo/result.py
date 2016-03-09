@@ -2,6 +2,7 @@ import os
 import sys
 import time
 
+
 def elapsed_str(elapsed):
     """return a string of the form hh:mm:sec"""
     hrs = int(elapsed/3600)
@@ -14,16 +15,17 @@ def elapsed_str(elapsed):
 class TestResult(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
-    and start/end times.
+    start/end times and optionally resource usage data.
     """
 
     def __init__(self, testspec, start_time, end_time,
-                 status='OK', err_msg=''):
+                 status='OK', info={}):
         self.testspec = testspec
         self.status = status
-        self.err_msg = err_msg
+        self.err_msg = info.get('err_msg', '')
         self.start_time = start_time
         self.end_time = end_time
+        self.memory_usage = info.get('memory_usage', 0)
 
     def elapsed(self):
         return self.end_time - self.start_time
@@ -62,11 +64,16 @@ class ResultPrinter(object):
 
     def _print_result(self, result):
         stream = self.stream
+
+        stats = elapsed_str(result.elapsed())
+        if result.memory_usage:
+            stats = stats + ', ' + str(result.memory_usage) + ' MB'
+
         if self.verbose:
             stream.write("%s ... %s (%s)\n%s" % (result.testspec,
-                                                   result.status,
-                                                   elapsed_str(result.elapsed()),
-                                                   result.err_msg))
+                                                 result.status,
+                                                 stats,
+                                                 result.err_msg))
             if result.err_msg:
                 stream.write("\n")
         elif result.status == 'OK':
@@ -80,7 +87,7 @@ class ResultPrinter(object):
             if result.status == 'FAIL':
                 stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
                                                          result.status,
-                                                         elapsed_str(result.elapsed()),
+                                                         stats,
                                                          result.err_msg))
             elif result.status == 'SKIP':
                 stream.write("\n%s: SKIP: %s\n" % (result.short_name(),
@@ -140,12 +147,38 @@ class ResultSummary(object):
         wallclock = time.time() - self._start_time
 
         s = "" if total == 1 else "s"
-        if not self.options.isolated:
-            procstr = " using %d processes" % self.options.num_procs
+        if self.options.isolated:
+            procstr = " in isolated processes"
         else:
-            procstr = ""
+            procstr = " using %d processes" % self.options.num_procs
         write("\n\nRan %d test%s%s\nSum of test times: %s\n"
               "Wall clock time:   %s\nSpeedup: %f\n\n" %
                       (total, s, procstr,
                        elapsed_str(test_sum_time), elapsed_str(wallclock),
                        test_sum_time/wallclock))
+
+
+class BenchmarkWriter(object):
+    """Writes benchmark data to a file for postprocessing.
+       Data is written as comma separated values (CSV)
+    """
+
+    def __init__(self, stream=sys.stdout):
+        self.timestamp = time.time()
+        self.stream = stream
+
+    def get_iter(self, input_iter):
+        for result in input_iter:
+            self._write_data(result)
+            yield result
+
+    def _write_data(self, result):
+        stream = self.stream
+        stream.write('%d,%s,%s,%f,%f\n' % (
+            self.timestamp,
+            result.testspec,
+            result.status,
+            result.elapsed(),
+            result.memory_usage
+        ))
+        stream.flush()

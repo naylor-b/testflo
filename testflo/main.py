@@ -5,7 +5,7 @@ them through a pipeline of iterators that operate on them and transform them
 into TestResult objects, then pass them on to other objects in the pipeline.
 
 The objects passed through the pipline are either strings that
-indicate which test to run (test specifiers), or TestReult
+indicate which test to run (test specifiers), or TestResult
 objects, which contain only the test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
@@ -18,13 +18,14 @@ from __future__ import print_function
 
 import os
 import sys
+import six
 import time
 
 from fnmatch import fnmatch
 
 from testflo.runner import ConcurrentTestRunner
 from testflo.isolated import IsolatedTestRunner
-from testflo.result import ResultPrinter, ResultSummary, TestResult
+from testflo.result import BenchmarkWriter, ResultPrinter, ResultSummary, TestResult
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
@@ -74,8 +75,8 @@ def main(args=None):
 
     options.skip_dirs = []
 
-    # read user prefs from ~/.testflo file.  create one if it
-    # isn't there
+    # read user prefs from ~/.testflo file.
+    # create one if it doesn't exist
     homedir = os.path.expanduser('~')
     rcfile = os.path.join(homedir, '.testflo')
     if not os.path.isfile(rcfile):
@@ -85,7 +86,7 @@ skip_dirs=site-packages,
     dist-packages,
     build,
     contrib
-""" )
+""")
     read_config_file(rcfile, options)
     if options.cfg:
         read_config_file(options.cfg, options)
@@ -106,9 +107,19 @@ skip_dirs=site-packages,
     setup_coverage(options)
     setup_profile(options)
 
-    with open(options.outfile, 'w') as report:
+    if options.benchmark:
+        options.isolated = True
+        discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
+                                    func_pattern=six.text_type('benchmark*'),
+                                    dir_exclude=dir_exclude)
+        benchmark_file = open(options.benchmarkfile, 'a')
+    else:
+        discoverer = TestDiscoverer(dir_exclude=dir_exclude)
+        benchmark_file = open(os.devnull, 'a')
+
+    with open(options.outfile, 'w') as report, benchmark_file as bdata:
         pipeline = [
-            TestDiscoverer(dir_exclude=dir_exclude).get_iter,
+            discoverer.get_iter,
         ]
 
         if options.dryrun:
@@ -128,6 +139,11 @@ skip_dirs=site-packages,
                 runner = ConcurrentTestRunner(options)
 
             pipeline.append(runner.get_iter)
+
+            if options.benchmark:
+                pipeline.extend([
+                    BenchmarkWriter(stream=bdata).get_iter,
+                ])
 
             pipeline.extend([
                 ResultPrinter(verbose=options.verbose).get_iter,
