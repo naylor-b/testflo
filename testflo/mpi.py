@@ -14,7 +14,7 @@ from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.result import TestResult
 
 
-def run_mpi(testspec, nprocs, args, timeout):
+def run_mpi(testspec, nprocs, args):
     """This runs the test using mpirun in a subprocess,
     then returns the TestResult object.
     """
@@ -97,8 +97,6 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
                 self.testcase = testcase
 
                 if testcase and hasattr(testcase, 'N_PROCS'):
-                    yield run_mpi(testspec, testcase.N_PROCS, self.args,
-                                  self.options.timeout)
+                    yield run_mpi(testspec, testcase.N_PROCS, self.args)
                 else:
-                    yield run_isolated(testspec, self.args,
-                                       self.options.timeout)
+                    yield run_isolated(testspec, self.args)

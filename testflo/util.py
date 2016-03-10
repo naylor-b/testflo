@@ -70,9 +70,6 @@ def _get_parser():
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
                         help="Standard output (stdout) will not be captured and will be"
                              " written to the screen immediately.")
-    parser.add_argument('--timeout', action='store', dest='timeout',
-                        default=-1., type=float,
-                        help='Timeout for running isolated tests (sec).')
     parser.add_argument('--coverage', action='store_true', dest='coverage',
                         help="Perform coverage analysis and display results on stdout")
     parser.add_argument('--coverage-html', action='store_true', dest='coveragehtml',

@@ -15,7 +15,7 @@ from testflo.result import TestResult
 from testflo.cover import save_coverage
 
 
-def run_isolated(testspec, args, timeout):
+def run_isolated(testspec, args):
     """This runs the test in a subprocess,
     then returns the TestResult object.
     """
