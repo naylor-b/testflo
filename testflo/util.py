@@ -268,6 +268,7 @@ def get_module(fname):
 
     try:
         __import__(modpath)
+        mod = sys.modules[modpath]
     except ImportError:
         # this might be a module that's not in the same
         # environment as testflo, so try temporarily prepending
@@ -278,12 +279,15 @@ def get_module(fname):
         sys.path.extend(pdirs)
         try:
             __import__(modpath)
+            mod = sys.modules[modpath]
+            # don't keep this module around in sys.modules
+            del sys.modules[modpath]
         finally:
             sys.path = oldpath
     finally:
         stop_coverage()
 
-    return fname, sys.modules[modpath]
+    return fname, mod
 
 
 def read_test_file(testfile):
