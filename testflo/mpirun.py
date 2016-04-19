@@ -13,8 +13,9 @@ if __name__ == '__main__':
     from mpi4py import MPI
     from testflo.util import _get_parser, get_memory_usage
     from testflo.runner import TestRunner, exit_codes
-    from testflo.result import TestResult
+    from testflo.test import Test
     from testflo.cover import save_coverage
+    from testflo.options import get_options
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
@@ -23,12 +24,13 @@ if __name__ == '__main__':
     try:
         try:
             comm = MPI.COMM_WORLD
-            options = _get_parser().parse_args()
-            runner = TestRunner(options)
-            result = runner.run_testspec(options.tests[0])
+            options = get_options()
+            test = Test(options.tests[0])
+            result = test.run()
+            # runner = TestRunner(options)
+            # result = runner.run_testspec(options.tests[0])
         except:
-            result = TestResult(options.tests[0], 0., 0., 'FAIL',
-                                {'err_msg': traceback.format_exc()})
+            result = Test(options.tests[0], 'FAIL', err_msg=traceback.format_exc())
 
         # collect resource usage data
         memory_usage = get_memory_usage()

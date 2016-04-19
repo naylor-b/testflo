@@ -2,10 +2,10 @@
 testflo is a python testing framework that takes an iterator of test
 specifier names e.g., <test_module>:<testcase>.<test_method>, and feeds
 them through a pipeline of iterators that operate on them and transform them
-into TestResult objects, then pass them on to other objects in the pipeline.
+into Test objects, then pass them on to other objects in the pipeline.
 
 The objects passed through the pipline are either strings that
-indicate which test to run (test specifiers), or TestResult
+indicate which test to run (test specifiers), or Test
 objects, which contain only the test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
@@ -25,7 +25,7 @@ from fnmatch import fnmatch
 
 from testflo.runner import ConcurrentTestRunner
 from testflo.isolated import IsolatedTestRunner
-from testflo.result import TestResult
+from testflo.test import Test
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
 from testflo.summary import ResultSummary
@@ -35,6 +35,7 @@ from testflo.timefilt import TimeFilter
 from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
+from testflo.options import get_options
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants
@@ -43,7 +44,7 @@ def dryrun(input_iter):
     """
     for spec in input_iter:
         print(spec)
-        yield TestResult(spec, 0, 0)
+        yield Test(spec, 'OK')
 
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
@@ -71,10 +72,7 @@ runner = None
 def main(args=None):
     global runner
 
-    if args is None:
-        args = sys.argv[1:]
-
-    options = _get_parser().parse_args(args)
+    options = get_options(args)
 
     options.skip_dirs = []
 

@@ -4,7 +4,7 @@ import sys
 from testflo.util import elapsed_str
 
 class ResultPrinter(object):
-    """Prints the status and error message (if any) of each TestResult object
+    """Prints the status and error message (if any) of each Test object
     after its test has been run if verbose is True.  If verbose is False,
     it displays a dot for each successful test, an 'S' for skipped tests,
     and an 'F' for failed tests.  If a test fails, the error message is always

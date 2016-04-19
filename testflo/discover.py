@@ -9,7 +9,7 @@ from os.path import basename, dirname, isdir
 
 from testflo.util import find_files, get_module, ismethod
 from testflo.runner import get_testcase
-from testflo.result import TestResult
+from testflo.test import Test
 
 
 class TestDiscoverer(object):
@@ -55,8 +55,7 @@ class TestDiscoverer(object):
         try:
             fname, mod = get_module(filename)
         except:
-            yield TestResult(filename, 0, 0, 'FAIL',
-                             {'err_msg': traceback.format_exc()})
+            yield Test(filename, 'FAIL', err_msg=traceback.format_exc())
         else:
             if basename(fname).startswith(six.text_type('__init__.')):
                 for result in self._dir_iter(dirname(fname)):
@@ -81,7 +80,7 @@ class TestDiscoverer(object):
                 methods.append(''.join((fname, ':', testcase.__name__,
                                                '.', method.__name__)))
         for m in sorted(methods):
-            yield m
+            yield Test(m)
 
     def _testspec_iter(self, testspec):
         """Iterate over expanded testspec strings found in the
@@ -105,8 +104,7 @@ class TestDiscoverer(object):
                 try:
                     fname, mod = get_module(module)
                 except:
-                    yield TestResult(testspec, 0, 0, 'FAIL',
-                                     {'err_msg': traceback.format_exc()})
+                    yield Test(testspec, 'FAIL', err_msg=traceback.format_exc())
                     return
                 try:
                     tcase = get_testcase(fname, mod, tcasename)

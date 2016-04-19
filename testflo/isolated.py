@@ -11,13 +11,13 @@ import json
 
 from testflo.util import _get_parser, get_memory_usage
 from testflo.runner import TestRunner, exit_codes
-from testflo.result import TestResult
+from testflo.test import Test
 from testflo.cover import save_coverage
-
+from testflo.options import get_options
 
 def run_isolated(testspec, args):
     """This runs the test in a subprocess,
-    then returns the TestResult object.
+    then returns the Test object.
     """
 
     info_file = None
@@ -51,13 +51,13 @@ def run_isolated(testspec, args):
             # fail silently if we can't get subprocess info
             pass
 
-        result = TestResult(testspec, start, end, status, info)
+        result = Test(testspec, start, end, status, info)
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
-        result = TestResult(testspec, 0., 0., 'FAIL',
+        result = Test(testspec, 0., 0., 'FAIL',
                             {'err_msg': traceback.format_exc()})
 
     finally:
@@ -89,13 +89,13 @@ class IsolatedTestRunner(TestRunner):
         self.options.isolated = False
         self.options.num_procs = 1
 
-        for testspec in input_iter:
-            if isinstance(testspec, TestResult):
+        for test in input_iter:
+            if test.status is not None:
                 # test already failed during discovery, probably an
                 # import failure
-                yield testspec
+                yield test
             else:
-                yield run_isolated(testspec, self.args)
+                yield run_isolated(test, self.args)
 
 
 if __name__ == '__main__':
@@ -104,9 +104,10 @@ if __name__ == '__main__':
     info = {}
 
     try:
-        options = _get_parser().parse_args()
+        options = get_options()
+        test = Test(options.tests[0])
         runner = TestRunner(options)
-        for result in runner.get_iter([options.tests[0]]):
+        for result in runner.get_iter([test]):
             break
 
         info['memory_usage'] = get_memory_usage()

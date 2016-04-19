@@ -9,14 +9,14 @@ import time
 import subprocess
 import json
 
-from testflo.runner import parse_test_path, exit_codes
+from testflo.runner import exit_codes
 from testflo.isolated import IsolatedTestRunner, run_isolated
-from testflo.result import TestResult
+from testflo.test import Test
 
 
 def run_mpi(testspec, nprocs, args):
     """This runs the test using mpirun in a subprocess,
-    then returns the TestResult object.
+    then returns the Test object.
     """
 
     info_file = None
@@ -61,14 +61,13 @@ def run_mpi(testspec, nprocs, args):
             # fail silently if we can't get subprocess info
             pass
 
-        result = TestResult(testspec, start, end, status, info)
+        result = Test(testspec, status, info)
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
-        result = TestResult(testspec, 0., 0., 'FAIL',
-                            {'err_msg': traceback.format_exc()})
+        result = Test(testspec, 'FAIL', err_msg=traceback.format_exc())
 
     finally:
         sys.stdout.flush()
@@ -85,18 +84,15 @@ def run_mpi(testspec, nprocs, args):
 
 class IsolatedMPITestRunner(IsolatedTestRunner):
     def run_isolated_tests(self, input_iter):
-        """Run test concurrently."""
+        """Run test in isolation, possibly under MPI."""
 
-        for testspec in input_iter:
-            if isinstance(testspec, TestResult):
+        for test in input_iter:
+            if test.status is not None:
                 # test already failed during discovery, probably an
                 # import failure
-                yield testspec
+                yield test
             else:
-                fname, mod, testcase, method = parse_test_path(testspec)
-                self.testcase = testcase
-
-                if testcase and hasattr(testcase, 'N_PROCS'):
+                if test.nprocs > 0:
                     yield run_mpi(testspec, testcase.N_PROCS, self.args)
                 else:
                     yield run_isolated(testspec, self.args)
