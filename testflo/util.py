@@ -329,6 +329,15 @@ def get_memory_usage():
         except:
             return 0.
 
+def elapsed_str(elapsed):
+    """return a string of the form hh:mm:sec"""
+    hrs = int(elapsed/3600)
+    elapsed -= (hrs * 3600)
+    mins = int(elapsed/60)
+    elapsed -= (mins * 60)
+    return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
+
+
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

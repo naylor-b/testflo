@@ -25,7 +25,10 @@ from fnmatch import fnmatch
 
 from testflo.runner import ConcurrentTestRunner
 from testflo.isolated import IsolatedTestRunner
-from testflo.result import BenchmarkWriter, ResultPrinter, ResultSummary, TestResult
+from testflo.result import TestResult
+from testflo.printer import ResultPrinter
+from testflo.benchmark import BenchmarkWriter
+from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
