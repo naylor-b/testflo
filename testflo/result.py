@@ -34,7 +34,7 @@ class TestResult(object):
         """Returns the testspec with only the file's basename instead
         of its full path.
         """
-        parts = self.testspec.split(':', 1)
+        parts = str(self.testspec).split(':', 1)
         fname = os.path.basename(parts[0])
         return ':'.join((fname, parts[-1]))
 
