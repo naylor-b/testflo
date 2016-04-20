@@ -12,5 +12,5 @@ class TimeFilter(object):
         with open(self.outfile, 'w') as f:
             for result in input_iter:
                 if result.status == 'OK' and result.elapsed() <= self.max_time:
-                    print(result.testspec, file=f)
+                    print(result.spec, file=f)
                 yield result

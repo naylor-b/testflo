@@ -28,24 +28,7 @@ exit_codes = {
 }
 
 
-def get_testcase(filename, mod, tcasename):
-    """Given a module and the name of a TestCase
-    class, return a TestCase class object or raise an exception.
-    """
-
-    try:
-        tcase = getattr(mod, tcasename)
-    except AttributeError:
-        raise AttributeError("Couldn't find TestCase '%s' in module '%s'" %
-                               (tcasename, filename))
-    if issubclass(tcase, unittest.TestCase):
-        return tcase
-    else:
-        raise TypeError("'%s' in file '%s' is not a TestCase." %
-                        (tcasename, filename))
-
-
-def worker(runner, test_queue, done_queue, worker_id):
+def worker(test_queue, done_queue, worker_id):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the Test object
     on the done_queue.
@@ -55,15 +38,16 @@ def worker(runner, test_queue, done_queue, worker_id):
     testflo.profile._prof_file = 'profile_%s.out' % worker_id
 
     test_count = 0
-    for testspec in iter(test_queue.get, 'STOP'):
+    for test in iter(test_queue.get, 'STOP'):
+
         try:
             test_count += 1
-            done_queue.put(testspec.run())
+            done_queue.put(test.run())
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
             # end when it tries to join all of the concurrent processes.
-            done_queue.put(Test(testspec, 'FAIL', err_msg=traceback.format_exc()))
+            done_queue.put(test)
 
     # don't save anything unless we actually ran a test
     if test_count > 0:
@@ -101,9 +85,6 @@ class ConcurrentTestRunner(TestRunner):
         if self.num_procs > 1:
             self.get_iter = self.run_concurrent_tests
 
-            # use this test runner in the concurrent workers
-            worker_runner = TestRunner(options)
-
             # Create queues
             self.task_queue = Queue()
             self.done_queue = Queue()
@@ -114,7 +95,7 @@ class ConcurrentTestRunner(TestRunner):
             for i in range(self.num_procs):
                 worker_id = "%d_%d" % (os.getpid(), i)
                 self.procs.append(Process(target=worker,
-                                          args=(worker_runner, self.task_queue,
+                                          args=(self.task_queue,
                                                 self.done_queue, worker_id)))
 
             for proc in self.procs:

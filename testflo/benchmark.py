@@ -19,7 +19,7 @@ class BenchmarkWriter(object):
         stream = self.stream
         stream.write('%d,%s,%s,%f,%f\n' % (
             self.timestamp,
-            result.testspec,
+            result.spec,
             result.status,
             result.elapsed(),
             result.memory_usage

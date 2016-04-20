@@ -8,7 +8,6 @@ from fnmatch import fnmatch
 from os.path import basename, dirname, isdir
 
 from testflo.util import find_files, get_module, ismethod
-from testflo.runner import get_testcase
 from testflo.test import Test
 
 
@@ -116,3 +115,20 @@ class TestDiscoverer(object):
         else:
             for spec in self._module_iter(module):
                 yield spec
+
+
+def get_testcase(filename, mod, tcasename):
+    """Given a module and the name of a TestCase
+    class, return a TestCase class object or raise an exception.
+    """
+
+    try:
+        tcase = getattr(mod, tcasename)
+    except AttributeError:
+        raise AttributeError("Couldn't find TestCase '%s' in module '%s'" %
+                               (tcasename, filename))
+    if issubclass(tcase, unittest.TestCase):
+        return tcase
+    else:
+        raise TypeError("'%s' in file '%s' is not a TestCase." %
+                        (tcasename, filename))

@@ -28,7 +28,7 @@ class ResultPrinter(object):
             stats = stats + ', ' + str(result.memory_usage) + ' MB'
 
         if self.verbose:
-            stream.write("%s ... %s (%s)\n%s" % (result.testspec,
+            stream.write("%s ... %s (%s)\n%s" % (result.spec,
                                                  result.status,
                                                  stats,
                                                  result.err_msg))
@@ -43,7 +43,7 @@ class ResultPrinter(object):
 
         if not self.verbose and result.err_msg:
             if result.status == 'FAIL':
-                stream.write("\n%s ... %s (%s)\n%s\n" % (result.testspec,
+                stream.write("\n%s ... %s (%s)\n%s\n" % (result.spec,
                                                          result.status,
                                                          stats,
                                                          result.err_msg))

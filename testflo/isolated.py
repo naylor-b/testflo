@@ -36,7 +36,7 @@ def init_server():
 
     queue = Queue()
     QueueManager.register('get_queue', callable=lambda:queue)
-    QueueManager.register('run_test', run_single_test)
+    QueueManager.register('run_test', run_isolated)
     server = QueueManager(address=('', get_options().port), authkey='foo')
     server.start()
 
@@ -58,7 +58,7 @@ def run_isolated(test, args):
     #
     #     cmd = [sys.executable,
     #            os.path.join(os.path.dirname(__file__), 'isolated.py'),
-    #            test.testspec]
+    #            test.spec]
     #     cmd = cmd+args
     #
     #     p = subprocess.Popen(cmd, env=os.environ)
@@ -103,15 +103,12 @@ def run_isolated(test, args):
     #     except OSError:
     #         pass
 
-#def run_sub(t):
     q = server.get_queue()
     p = Process(target=run_single_test, args=(test, q))
     p.start()
     t = q.get()
     p.join()
     return t
-
-    #return run_sub(test)
 
 
 class IsolatedTestRunner(TestRunner):

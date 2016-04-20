@@ -22,21 +22,31 @@ class Test(object):
 
     def __init__(self, testspec, status=None, err_msg=''):
         assert(isinstance(testspec,basestring))
-        self.testspec = testspec
+        self.spec = testspec
         self.status = status
         self.err_msg = err_msg
         self.memory_usage = 0
-        self.parent = self.method = None
+        self.nprocs = 0
+
+        options = get_options()
+        self.nocapture = options.nocapture
+        self.isolated = options.isolated
 
         if not err_msg:
-            self._get_test_parent()
+            _, _, self.nprocs = self._get_test_parent()
 
         if self.err_msg:
             self.start_time = self.end_time = time.time()
 
     def _get_test_parent(self):
+        """Get the parent of the test function, which will be either a
+        TestCase or a module. Also get the N_PROCS value if found.
+        """
+        parent = method = None
+        nprocs = 0
+
         try:
-            mod, testcase, method = _parse_test_path(self.testspec)
+            mod, testcase, method = _parse_test_path(self.spec)
         except Exception:
             self.status = 'FAIL'
             self.err_msg = traceback.format_exc()
@@ -45,12 +55,13 @@ class Test(object):
                 self.status = 'FAIL'
                 self.err_msg = 'ERROR: test method not specified.'
             else:
-                self.method = method
                 if testcase is not None:
-                    self.parent = testcase
-                    self.nprocs = getattr(testcase, 'N_PROCS', 0)
+                    parent = testcase
+                    nprocs = getattr(testcase, 'N_PROCS', 0)
                 else:
-                    self.parent = mod
+                    parent = mod
+
+        return parent, method, nprocs
 
     def run(self):
         """Runs the test, assuming status is not already known."""
@@ -58,17 +69,18 @@ class Test(object):
             # premature failure occurred during discovery, just return
             return self
 
+        # this is for test files without an __init__ file.  This MUST
+        # be done before the call to _get_test_parent.
+        sys.path.insert(0, os.path.dirname(self.spec.split(':',1)[0]))
+
         self.start_time = time.time()
 
-        if self.parent is None:
-            self._get_test_parent()
+        parent, method, _ = self._get_test_parent()
 
-        parent = self.parent
-        method = self.method
         if issubclass(parent, unittest.TestCase):
             parent = parent(methodName=method)
 
-        if get_options().nocapture:
+        if self.nocapture:
             outstream = sys.stdout
         else:
             outstream = DevNull()
@@ -109,6 +121,8 @@ class Test(object):
             self.memory_usage = get_memory_usage()
 
         finally:
+            sys.path = sys.path[1:]
+
             stop_coverage()
 
             sys.stderr = old_err
@@ -123,15 +137,15 @@ class Test(object):
         """Returns the testspec with only the file's basename instead
         of its full path.
         """
-        parts = self.testspec.split(':', 1)
+        parts = self.spec.split(':', 1)
         fname = os.path.basename(parts[0])
         return ':'.join((fname, parts[-1]))
 
     def __str__(self):
         if self.err_msg:
-            return "%s: %s\n%s" % (self.testspec, self.status, self.err_msg)
+            return "%s: %s\n%s" % (self.spec, self.status, self.err_msg)
         else:
-            return "%s: %s" % (self.testspec, self.status)
+            return "%s: %s" % (self.spec, self.status)
 
 
 def _parse_test_path(testspec):
