@@ -72,6 +72,10 @@ runner = None
 def main(args=None):
     global runner
 
+    # FIXME: get rid of this
+    if args is None:
+        args = sys.argv[1:]
+
     options = get_options(args)
 
     options.skip_dirs = []

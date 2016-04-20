@@ -93,6 +93,6 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
                 yield test
             else:
                 if test.nprocs > 0:
-                    yield run_mpi(testspec, testcase.N_PROCS, self.args)
+                    yield run_mpi(test, test.nprocs, self.args)
                 else:
-                    yield run_isolated(testspec, self.args)
+                    yield run_isolated(test, self.args)

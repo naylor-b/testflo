@@ -15,7 +15,7 @@ from testflo.test import Test
 from testflo.cover import save_coverage
 from testflo.options import get_options
 
-def run_isolated(testspec, args):
+def run_isolated(test, args):
     """This runs the test in a subprocess,
     then returns the Test object.
     """
@@ -24,11 +24,11 @@ def run_isolated(testspec, args):
     info = {}
 
     try:
-        start = time.time()
+        test.start_time = time.time()
 
         cmd = [sys.executable,
                os.path.join(os.path.dirname(__file__), 'isolated.py'),
-               testspec]
+               test.testspec]
         cmd = cmd+args
 
         p = subprocess.Popen(cmd, env=os.environ)
@@ -51,14 +51,17 @@ def run_isolated(testspec, args):
             # fail silently if we can't get subprocess info
             pass
 
-        result = Test(testspec, start, end, status, info)
+        test.end_time = end
+        test.status = status
+        test.err_msg = info.get('err_msg','')
 
     except:
         # we generally shouldn't get here, but just in case,
         # handle it so that the main process doesn't hang at the
         # end when it tries to join all of the concurrent processes.
-        result = Test(testspec, 0., 0., 'FAIL',
-                            {'err_msg': traceback.format_exc()})
+        test.status = 'FAIL'
+        test.end_time = time.time()
+        test.err_msg = traceback.format_exc()
 
     finally:
         sys.stdout.flush()
@@ -70,7 +73,7 @@ def run_isolated(testspec, args):
         except OSError:
             pass
 
-    return result
+    return test
 
 
 class IsolatedTestRunner(TestRunner):
