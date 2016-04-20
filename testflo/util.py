@@ -64,6 +64,10 @@ def _get_parser():
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess."
                              " This is required to run MPI tests.")
+    parser.add_argument('--port', action='store', dest='port',
+                        default=50000, type=int,
+                        help='Specifies the port used for the server that is '
+                             'used to run isolated tests.')
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
                         help="Stop after the first test failure, or as soon as possible"
                              " when running concurrent tests.")

@@ -16,6 +16,7 @@ if __name__ == '__main__':
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.options import get_options
+    from testflo.isolated import get_client_queue
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
@@ -42,9 +43,7 @@ if __name__ == '__main__':
         if comm.rank == 0:
             # sum all resource usage data
             rdata = {}
-            info['memory_usage'] = 0
-            for mem in memory_usages:
-                info['memory_usage'] +=  mem
+            memory_usage = sum(memory_usages)
 
             # check for errors and record error message
             for r in results:

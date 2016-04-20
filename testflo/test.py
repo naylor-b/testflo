@@ -10,10 +10,9 @@ from six.moves import cStringIO
 from testflo.cover import start_coverage, stop_coverage
 from testflo.profile import start_profile, stop_profile
 
-from testflo.util import get_module, ismethod
+from testflo.util import get_module, ismethod, get_memory_usage
 from testflo.devnull import DevNull
 from testflo.options import get_options
-
 
 class Test(object):
     """Contains the path to the test function/method, status
@@ -107,6 +106,7 @@ class Test(object):
             self.end_time = time.time()
             self.status = status
             self.err_msg = errstream.getvalue()
+            self.memory_usage = get_memory_usage()
 
         finally:
             stop_coverage()

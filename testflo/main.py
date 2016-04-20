@@ -24,7 +24,7 @@ import time
 from fnmatch import fnmatch
 
 from testflo.runner import ConcurrentTestRunner
-from testflo.isolated import IsolatedTestRunner
+from testflo.isolated import IsolatedTestRunner, init_server, shutdown
 from testflo.test import Test
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
@@ -122,6 +122,10 @@ skip_dirs=site-packages,
         discoverer = TestDiscoverer(dir_exclude=dir_exclude)
         benchmark_file = open(os.devnull, 'a')
 
+    if options.isolated:
+        init_server()
+
+    retval = 0
     with open(options.outfile, 'w') as report, benchmark_file as bdata:
         pipeline = [
             discoverer.get_iter,
@@ -169,7 +173,10 @@ skip_dirs=site-packages,
         finalize_coverage(options)
         finalize_profile(options)
 
-        return retval
+    if options.isolated:
+        shutdown() # shut down the isolation server
+
+    return retval
 
 
 def run_tests(args=None):
