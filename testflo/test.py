@@ -122,11 +122,17 @@ class Test(object):
 
         return result
 
-    def run(self):
+    def run(self, server=None):
         """Runs the test, assuming status is not already known."""
         if self.status is not None:
             # premature failure occurred during discovery, just return
             return self
+
+        if server is not None:
+            if self.mpi and self.nprocs > 0:
+                return self.run_mpi(server)
+            elif self.isolated:
+                return self.run_isolated(server)
 
         # this is for test files without an __init__ file.  This MUST
         # be done before the call to _get_test_parent.

@@ -3,21 +3,12 @@ Methods and class for running tests serially or concurrently.
 """
 
 import os
-import sys
-import traceback
-import time
-import unittest
-import inspect
 
 from six import advance_iterator
-from six.moves import cStringIO
-from types import FunctionType
 from multiprocessing import Queue, Process
 
-from testflo.util import get_module, ismethod
-from testflo.cover import setup_coverage, start_coverage, stop_coverage, \
-                          save_coverage
-from testflo.profile import start_profile, stop_profile, save_profile
+from testflo.cover import setup_coverage, save_coverage
+from testflo.profile import save_profile
 import testflo.profile
 from testflo.test import Test
 
@@ -42,12 +33,7 @@ def worker(server, test_queue, done_queue, worker_id):
 
         try:
             test_count += 1
-            if test.mpi and test.nprocs > 0:
-                done_queue.put(test.run_mpi(server))
-            elif test.isolated:
-                done_queue.put(test.run_isolated(server))
-            else:
-                done_queue.put(test.run())
+            done_queue.put(test.run(server))
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -69,8 +55,9 @@ class TestRunner(object):
     def get_iter(self, input_iter):
         """Run tests serially."""
 
+        server = self.server
         for test in input_iter:
-            result = test.run()
+            result = test.run(server)
             yield result
             if self.stop and result.status == 'FAIL':
                 break
