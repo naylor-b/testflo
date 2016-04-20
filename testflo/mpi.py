@@ -10,7 +10,7 @@ import subprocess
 import json
 
 from testflo.runner import exit_codes
-from testflo.isolated import IsolatedTestRunner, run_isolated
+from testflo.isolated import IsolatedTestRunner
 from testflo.test import Test
 
 
@@ -86,6 +86,7 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
     def run_isolated_tests(self, input_iter):
         """Run test in isolation, possibly under MPI."""
 
+        q = self.server.get_queue()
         for test in input_iter:
             if test.status is not None:
                 # test already failed during discovery, probably an
@@ -95,4 +96,5 @@ class IsolatedMPITestRunner(IsolatedTestRunner):
                 if test.nprocs > 0:
                     yield run_mpi(test, test.nprocs, self.args)
                 else:
-                    yield run_isolated(test, self.args)
+                    self.server.run_test(test, q)
+                    yield q.get()

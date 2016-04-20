@@ -19,106 +19,32 @@ from testflo.test import Test
 from testflo.cover import save_coverage
 from testflo.options import get_options
 
-server = None
 
 def run_single_test(test, q):
     test.run()
     q.put(test)
 
-
-def init_server():
-    """Start up a manager that controls a shared queue and spawns isolated
-    test processes.
-    """
-    global server
-
-    class QueueManager(BaseManager): pass
-
-    queue = Queue()
-    QueueManager.register('get_queue', callable=lambda:queue)
-    QueueManager.register('run_test', run_isolated)
-    server = QueueManager(address=('', get_options().port), authkey='foo')
-    server.start()
-
-def shutdown():
-    if server is not None:
-        server.shutdown()
-
-
-def run_isolated(test, args):
+def run_isolated(test, q):
     """This runs the test in a subprocess,
     then returns the Test object.
     """
 
-    # info_file = None
-    # info = {}
-    #
-    # try:
-    #     test.start_time = time.time()
-    #
-    #     cmd = [sys.executable,
-    #            os.path.join(os.path.dirname(__file__), 'isolated.py'),
-    #            test.spec]
-    #     cmd = cmd+args
-    #
-    #     p = subprocess.Popen(cmd, env=os.environ)
-    #     p.wait()
-    #
-    #     end = time.time()
-    #
-    #     for status, val in exit_codes.items():
-    #         if val == p.returncode:
-    #             break
-    #     else:
-    #         status = 'FAIL'
-    #
-    #     try:
-    #         info_file = 'testflo.%d' % p.pid
-    #         with open(info_file, 'r') as f:
-    #             s = f.read()
-    #         info = json.loads(s)
-    #     except:
-    #         # fail silently if we can't get subprocess info
-    #         pass
-    #
-    #     test.end_time = end
-    #     test.status = status
-    #     test.err_msg = info.get('err_msg','')
-    #
-    # except:
-    #     # we generally shouldn't get here, but just in case,
-    #     # handle it so that the main process doesn't hang at the
-    #     # end when it tries to join all of the concurrent processes.
-    #     test.status = 'FAIL'
-    #     test.end_time = time.time()
-    #     test.err_msg = traceback.format_exc()
-    #
-    # finally:
-    #     sys.stdout.flush()
-    #     sys.stderr.flush()
-    #
-    # if info_file:
-    #     try:
-    #         os.remove(info_file)
-    #     except OSError:
-    #         pass
-
-    q = server.get_queue()
     p = Process(target=run_single_test, args=(test, q))
     p.start()
     t = q.get()
     p.join()
-    return t
+    q.put(t)
 
 
 class IsolatedTestRunner(TestRunner):
     """TestRunner that runs each test in a separate process."""
 
-    def __init__(self, options, args):
+    def __init__(self, options, args, server):
         super(IsolatedTestRunner, self).__init__(options)
         self.get_iter = self.run_isolated_tests
         self.options = options
         self.args = [a for a in args if a not in options.tests]
+        self.server = server
 
     def run_isolated_tests(self, input_iter):
         """Run each test isolated in a separate process."""
@@ -127,23 +53,26 @@ class IsolatedTestRunner(TestRunner):
         self.options.isolated = False
         self.options.num_procs = 1
 
+        q = self.server.get_queue()
         for test in input_iter:
             if test.status is not None:
                 # test already failed during discovery, probably an
                 # import failure
                 yield test
             else:
-                yield run_isolated(test, self.args)
+                self.server.run_test(test, q)
+                yield q.get()
 
 
-def get_client_queue():
+def get_client_manager():
     class QueueManager(BaseManager): pass
 
     # connect to the shared queue
     QueueManager.register('get_queue')
+    QueueManager.register('run_test')
     m = QueueManager(address=('', get_options().port), authkey='foo')
     m.connect()
-    return m.get_queue()
+    return m
 
 
 # if __name__ == '__main__':

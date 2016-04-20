@@ -6,7 +6,7 @@ into Test objects, then pass them on to other objects in the pipeline.
 
 The objects passed through the pipline are either strings that
 indicate which test to run (test specifiers), or Test
-objects, which contain only the test specifier string, a status indicating
+objects, which contain the test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
 
@@ -23,8 +23,12 @@ import time
 
 from fnmatch import fnmatch
 
+from multiprocessing.managers import BaseManager
+from multiprocessing import Process, Queue
+#import Queue
+
 from testflo.runner import ConcurrentTestRunner
-from testflo.isolated import IsolatedTestRunner, init_server, shutdown
+from testflo.isolated import IsolatedTestRunner, run_isolated
 from testflo.test import Test
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
@@ -36,6 +40,14 @@ from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
+
+# create a server (but don't start it yet) to let us share a queue with tests
+# running in subprocesses.
+class QueueManager(BaseManager): pass
+queue = Queue()
+QueueManager.register('get_queue', callable=lambda:queue)
+QueueManager.register('run_test', run_isolated)
+_server = QueueManager(address=('', get_options().port), authkey='foo')
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants
@@ -123,7 +135,7 @@ skip_dirs=site-packages,
         benchmark_file = open(os.devnull, 'a')
 
     if options.isolated:
-        init_server()
+        _server.start()
 
     retval = 0
     with open(options.outfile, 'w') as report, benchmark_file as bdata:
@@ -140,10 +152,10 @@ skip_dirs=site-packages,
                 try:
                     import mpi4py
                 except ImportError:
-                    runner = IsolatedTestRunner(options, args)
+                    runner = IsolatedTestRunner(options, args, server=_server)
                 else:
                     from testflo.mpi import IsolatedMPITestRunner
-                    runner = IsolatedMPITestRunner(options, args)
+                    runner = IsolatedMPITestRunner(options, args, server=_server)
             else:
                 runner = ConcurrentTestRunner(options)
 
@@ -174,7 +186,7 @@ skip_dirs=site-packages,
         finalize_profile(options)
 
     if options.isolated:
-        shutdown() # shut down the isolation server
+        _server.shutdown() # shut down the isolation server
 
     return retval
 
