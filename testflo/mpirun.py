@@ -30,7 +30,7 @@ if __name__ == '__main__':
     QueueManager.register('get_queue')
     QueueManager.register('run_test')
     QueueManager.register('dict_handler')
-    manager = QueueManager(address=('', get_options().port), authkey='foo')
+    manager = QueueManager(address=('', get_options().port), authkey=b'foo')
     manager.connect()
     d = manager.dict_handler()  # test objects keyed by test spec
     q = None

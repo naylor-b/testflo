@@ -22,7 +22,6 @@ class Test(object):
     """
 
     def __init__(self, testspec, status=None, err_msg=''):
-        assert(isinstance(testspec,basestring))
         self.spec = testspec
         self.status = status
         self.err_msg = err_msg
@@ -78,8 +77,6 @@ class Test(object):
         """
 
         try:
-            start = time.time()
-
             from distutils import spawn
             mpirun_exe = None
             if spawn.find_executable("mpirun") is not None:
@@ -102,12 +99,10 @@ class Test(object):
             p = subprocess.Popen(cmd, env=os.environ)
             p.wait()
 
-            end = time.time()
-
             q = server.get_queue()
             result = q.get()
 
-            dct.remove_item(self.spec) # cleanup
+            #dct.remove_item(self.spec) # cleanup
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -125,7 +120,7 @@ class Test(object):
     def run(self, server=None):
         """Runs the test, assuming status is not already known."""
         if self.status is not None:
-            # premature failure occurred during discovery, just return
+            # premature failure occurred , just return
             return self
 
         if server is not None:
@@ -183,6 +178,8 @@ class Test(object):
             self.end_time = time.time()
             self.status = status
             self.err_msg = errstream.getvalue()
+            if len(self.err_msg) > 1024:
+                self.err_msg = self.err_msg[:1024] + "...<some output deleted>"
             self.memory_usage = get_memory_usage()
 
         finally:
@@ -229,7 +226,6 @@ def _parse_test_path(testspec):
     """
 
     testcase = method = None
-    testspec = str(testspec)
     testspec = testspec.strip()
     parts = testspec.split(':')
     if len(parts) > 1 and parts[1].startswith('\\'):  # windows abs path
@@ -268,18 +264,12 @@ def _try_call(method):
     try:
         start_profile()
         method()
-    except Exception as e:
-        msg = traceback.format_exc()
-        if isinstance(e, unittest.SkipTest):
-            status = 'SKIP'
-            sys.stderr.write(str(e))
-        else:
-            status = 'FAIL'
-            sys.stderr.write(msg)
+    except unittest.SkipTest as e:
+        status = 'SKIP'
+        sys.stderr.write(str(e))
     except:
-        msg = traceback.format_exc()
         status = 'FAIL'
-        sys.stderr.write(msg)
+        sys.stderr.write(traceback.format_exc())
     finally:
         stop_profile()
 

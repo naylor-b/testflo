@@ -65,7 +65,7 @@ queue = Queue()
 QueueManager.register('get_queue', callable=lambda:queue)
 QueueManager.register('dict_handler', callable=lambda:_dict_handler)
 QueueManager.register('run_test', run_isolated)
-_server = QueueManager(address=('', get_options().port), authkey='foo')
+_server = QueueManager(address=('', get_options().port), authkey=b'foo')
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants
@@ -143,7 +143,9 @@ skip_dirs=site-packages,
     setup_profile(options)
 
     if options.benchmark:
+        options.num_procs = 1
         options.isolated = True
+        options.mpi = True
         discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
                                     func_pattern=six.text_type('benchmark*'),
                                     dir_exclude=dir_exclude)

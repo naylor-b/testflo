@@ -24,31 +24,29 @@ class ResultPrinter(object):
         stream = self.stream
 
         stats = elapsed_str(result.elapsed())
-        if result.memory_usage:
-            stats = stats + ', ' + str(result.memory_usage) + ' MB'
 
-        if self.verbose:
-            stream.write("%s ... %s (%s)\n%s" % (result.spec,
-                                                 result.status,
-                                                 stats,
-                                                 result.err_msg))
+        if result.mpi and result.nprocs > 0:
+            run_type = '(mpi) '
+        elif result.isolated:
+            run_type = '(isolated) '
+        else:
+            run_type = ''
+
+        if self.verbose or result.err_msg:
             if result.err_msg:
-                stream.write("\n")
+                stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
+                                                     run_type,
+                                                     result.spec,
+                                                     result.status,
+                                                     stats, result.memory_usage,
+                                                     result.err_msg))
+            else:
+                stream.write("%s%s ... %s (%s, %d MB)\n" % (
+                                                    run_type,
+                                                    result.spec,
+                                                    result.status,
+                                                    stats, result.memory_usage))
         elif result.status == 'OK':
             stream.write('.')
-        elif result.status == 'FAIL':
-            stream.write('F')
-        elif result.status == 'SKIP':
-            stream.write('S')
-
-        if not self.verbose and result.err_msg:
-            if result.status == 'FAIL':
-                stream.write("\n%s ... %s (%s)\n%s\n" % (result.spec,
-                                                         result.status,
-                                                         stats,
-                                                         result.err_msg))
-            elif result.status == 'SKIP':
-                stream.write("\n%s: SKIP: %s\n" % (result.short_name(),
-                                                   result.err_msg))
 
         stream.flush()
