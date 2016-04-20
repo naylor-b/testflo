@@ -28,7 +28,7 @@ exit_codes = {
 }
 
 
-def worker(test_queue, done_queue, worker_id):
+def worker(server, test_queue, done_queue, worker_id):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the Test object
     on the done_queue.
@@ -42,7 +42,12 @@ def worker(test_queue, done_queue, worker_id):
 
         try:
             test_count += 1
-            done_queue.put(test.run())
+            if test.mpi and test.nprocs > 0:
+                done_queue.put(test.run_mpi(server))
+            elif test.isolated:
+                done_queue.put(test.run_isolated(server))
+            else:
+                done_queue.put(test.run())
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -56,8 +61,9 @@ def worker(test_queue, done_queue, worker_id):
 
 
 class TestRunner(object):
-    def __init__(self, options):
+    def __init__(self, options, server):
         self.stop = options.stop
+        self.server = server
         setup_coverage(options)
 
     def get_iter(self, input_iter):
@@ -77,8 +83,8 @@ class ConcurrentTestRunner(TestRunner):
     to execute tests concurrently.
     """
 
-    def __init__(self, options):
-        super(ConcurrentTestRunner, self).__init__(options)
+    def __init__(self, options, server):
+        super(ConcurrentTestRunner, self).__init__(options, server)
         self.num_procs = options.num_procs
 
         # only do concurrent stuff if num_procs > 1
@@ -95,7 +101,7 @@ class ConcurrentTestRunner(TestRunner):
             for i in range(self.num_procs):
                 worker_id = "%d_%d" % (os.getpid(), i)
                 self.procs.append(Process(target=worker,
-                                          args=(self.task_queue,
+                                          args=(server, self.task_queue,
                                                 self.done_queue, worker_id)))
 
             for proc in self.procs:

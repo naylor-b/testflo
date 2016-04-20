@@ -4,6 +4,7 @@ import time
 import traceback
 import inspect
 import unittest
+import subprocess
 
 from six.moves import cStringIO
 
@@ -27,10 +28,13 @@ class Test(object):
         self.err_msg = err_msg
         self.memory_usage = 0
         self.nprocs = 0
+        self.start_time = 0
+        self.end_time = 0
 
         options = get_options()
         self.nocapture = options.nocapture
         self.isolated = options.isolated
+        self.mpi = options.mpi
 
         if not err_msg:
             _, _, self.nprocs = self._get_test_parent()
@@ -62,6 +66,61 @@ class Test(object):
                     parent = mod
 
         return parent, method, nprocs
+
+    def run_isolated(self, server):
+        q = server.get_queue()
+        server.run_test(self, q)
+        return q.get()
+
+    def run_mpi(self, server):
+        """This runs the test using mpirun in a subprocess,
+        then returns the Test object.
+        """
+
+        try:
+            start = time.time()
+
+            from distutils import spawn
+            mpirun_exe = None
+            if spawn.find_executable("mpirun") is not None:
+                mpirun_exe = "mpirun"
+            elif spawn.find_executable("mpiexec") is not None:
+                mpirun_exe = "mpiexec"
+
+            if mpirun_exe is None:
+                raise Exception("mpirun or mpiexec was not found in the system path.")
+
+            cmd = [mpirun_exe, '-n', str(self.nprocs),
+                   sys.executable,
+                   os.path.join(os.path.dirname(__file__), 'mpirun.py'),
+                   self.spec]
+
+            # put test object in shared dictionary so all MPI procs can get it
+            dct = server.dict_handler()
+            dct.set_item(self.spec, self)
+
+            p = subprocess.Popen(cmd, env=os.environ)
+            p.wait()
+
+            end = time.time()
+
+            q = server.get_queue()
+            result = q.get()
+
+            dct.remove_item(self.spec) # cleanup
+        except:
+            # we generally shouldn't get here, but just in case,
+            # handle it so that the main process doesn't hang at the
+            # end when it tries to join all of the concurrent processes.
+            self.status = 'FAIL'
+            self.err_msg = traceback.format_exc()
+            result = self
+
+        finally:
+            sys.stdout.flush()
+            sys.stderr.flush()
+
+        return result
 
     def run(self):
         """Runs the test, assuming status is not already known."""

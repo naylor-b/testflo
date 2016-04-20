@@ -23,12 +23,12 @@ import time
 
 from fnmatch import fnmatch
 
-from multiprocessing.managers import BaseManager
+from multiprocessing.managers import SyncManager
 from multiprocessing import Process, Queue
 #import Queue
 
 from testflo.runner import ConcurrentTestRunner
-from testflo.isolated import IsolatedTestRunner, run_isolated
+from testflo.isolated import run_isolated
 from testflo.test import Test
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
@@ -43,9 +43,27 @@ from testflo.options import get_options
 
 # create a server (but don't start it yet) to let us share a queue with tests
 # running in subprocesses.
-class QueueManager(BaseManager): pass
+
+class _DictHandler(object):
+    def __init__(self):
+        self.dct = {}
+
+    def get_item(self, name):
+        return self.dct[name]
+
+    def set_item(self, name, obj):
+        self.dct[name] = obj
+
+    def remove_item(self, name):
+        del self.dct[name]
+
+_dict_handler = _DictHandler()
+
+class QueueManager(SyncManager): pass
+
 queue = Queue()
 QueueManager.register('get_queue', callable=lambda:queue)
+QueueManager.register('dict_handler', callable=lambda:_dict_handler)
 QueueManager.register('run_test', run_isolated)
 _server = QueueManager(address=('', get_options().port), authkey='foo')
 
@@ -134,7 +152,7 @@ skip_dirs=site-packages,
         discoverer = TestDiscoverer(dir_exclude=dir_exclude)
         benchmark_file = open(os.devnull, 'a')
 
-    if options.isolated:
+    if options.isolated or options.mpi:
         _server.start()
 
     retval = 0
@@ -148,16 +166,7 @@ skip_dirs=site-packages,
                 dryrun,
             ])
         else:
-            if options.isolated:
-                try:
-                    import mpi4py
-                except ImportError:
-                    runner = IsolatedTestRunner(options, args, server=_server)
-                else:
-                    from testflo.mpi import IsolatedMPITestRunner
-                    runner = IsolatedMPITestRunner(options, args, server=_server)
-            else:
-                runner = ConcurrentTestRunner(options)
+            runner = ConcurrentTestRunner(options, server=_server)
 
             pipeline.append(runner.get_iter)
 

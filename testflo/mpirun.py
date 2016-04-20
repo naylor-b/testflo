@@ -10,63 +10,69 @@ if __name__ == '__main__':
     import traceback
     import json
 
+    from multiprocessing.managers import SyncManager
+    from multiprocessing import Process, Queue
+
     from mpi4py import MPI
     from testflo.util import _get_parser, get_memory_usage
     from testflo.runner import TestRunner, exit_codes
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.options import get_options
-    from testflo.isolated import get_client_queue
+
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
-    info = {}
+
+    # connect to the shared queue and dict
+    class QueueManager(SyncManager): pass
+
+    QueueManager.register('get_queue')
+    QueueManager.register('run_test')
+    QueueManager.register('dict_handler')
+    manager = QueueManager(address=('', get_options().port), authkey='foo')
+    manager.connect()
+    d = manager.dict_handler()  # test objects keyed by test spec
+    q = None
 
     try:
         try:
             comm = MPI.COMM_WORLD
-            options = get_options()
-            test = Test(options.tests[0])
-            result = test.run()
-            # runner = TestRunner(options)
-            # result = runner.run_testspec(options.tests[0])
+            test = d.get_item(sys.argv[-1])
+            test.run()
         except:
-            result = Test(options.tests[0], 'FAIL', err_msg=traceback.format_exc())
-
-        # collect resource usage data
-        memory_usage = get_memory_usage()
-        memory_usages = comm.gather(memory_usage, root=0)
+            print(traceback.format_exc())
+            test.status = 'FAIL'
+            test.err_msg = traceback.format_exc()
 
         # collect results
-        results = comm.gather(result, root=0)
-
+        results = comm.gather(test, root=0)
         if comm.rank == 0:
-            # sum all resource usage data
-            rdata = {}
-            memory_usage = sum(memory_usages)
+            q = manager.get_queue()
+
+            total_mem_usage = sum(r.memory_usage for r in results)
+            test.memory_usage = total_mem_usage
 
             # check for errors and record error message
             for r in results:
                 if r.status != 'OK':
-                    info['err_msg'] = result.err_msg
+                    test.err_msg = r.err_msg
+                    test.status = 'FAIL'
                     exitcode = exit_codes[r.status]
                     break
 
         save_coverage()
 
     except Exception:
-        exc = sys.exc_info()
-        info['err_msg'] = traceback.format_exc()
+        test.err_msg = traceback.format_exc()
+        test.status = 'FAIL'
         exitcode = exit_codes['FAIL']
 
     finally:
         sys.stdout.flush()
         sys.stderr.flush()
-        if comm.rank == 0:
-            try:
-                with open('testflo.%d' % os.getppid(), 'w') as f:
-                    f.write(json.dumps(info))
-            except AttributeError:
-                # getppid() is not available on Windows with py27
-                pass
+
+        if comm.rank == 0 and q is not None:
+            q.put(test)
+
         sys.exit(exitcode)
