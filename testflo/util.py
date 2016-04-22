@@ -63,8 +63,9 @@ def _get_parser():
                           "which tests would have been run.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess.")
-    parser.add_argument('--mpi', action='store_true', dest='mpi',
-                        help="Run each MPI test under MPI. All other tests will run normally.")
+    parser.add_argument('--nompi', action='store_true', dest='nompi',
+                        help="Force all tests to run without MPI. This can be useful "
+                             "for debugging.")
     parser.add_argument('--port', action='store', dest='port',
                         default=50000, type=int,
                         help='Specifies the port used for the server that is '

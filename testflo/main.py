@@ -145,7 +145,6 @@ skip_dirs=site-packages,
     if options.benchmark:
         options.num_procs = 1
         options.isolated = True
-        options.mpi = True
         discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
                                     func_pattern=six.text_type('benchmark*'),
                                     dir_exclude=dir_exclude)
@@ -154,7 +153,7 @@ skip_dirs=site-packages,
         discoverer = TestDiscoverer(dir_exclude=dir_exclude)
         benchmark_file = open(os.devnull, 'a')
 
-    if options.isolated or options.mpi:
+    if options.isolated or not options.nompi:
         _server.start()
 
     retval = 0
@@ -196,7 +195,7 @@ skip_dirs=site-packages,
         finalize_coverage(options)
         finalize_profile(options)
 
-    if options.isolated:
+    if options.isolated or not options.nompi:
         _server.shutdown() # shut down the isolation server
 
     return retval

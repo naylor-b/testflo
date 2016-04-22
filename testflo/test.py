@@ -33,7 +33,7 @@ class Test(object):
         options = get_options()
         self.nocapture = options.nocapture
         self.isolated = options.isolated
-        self.mpi = options.mpi
+        self.mpi = not options.nompi
 
         if not err_msg:
             _, _, self.nprocs = self._get_test_parent()
