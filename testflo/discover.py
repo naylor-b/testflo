@@ -68,7 +68,7 @@ class TestDiscoverer(object):
 
                     elif inspect.isfunction(obj):
                         if fnmatch(name, self.func_pattern):
-                            yield ':'.join((filename, obj.__name__))
+                            yield Test(':'.join((filename, obj.__name__)))
 
     def _testcase_iter(self, fname, testcase):
         """Iterate over all testspecs found in a TestCase class."""
@@ -98,7 +98,7 @@ class TestDiscoverer(object):
         if rest:
             tcasename, _, method = rest.partition('.')
             if method:
-                yield testspec
+                yield Test(testspec)
             else:  # could be a test function or a TestCase
                 try:
                     fname, mod = get_module(module)
@@ -108,7 +108,7 @@ class TestDiscoverer(object):
                 try:
                     tcase = get_testcase(fname, mod, tcasename)
                 except (AttributeError, TypeError):
-                    yield testspec
+                    yield Test(testspec)
                 else:
                     for spec in self._testcase_iter(fname, tcase):
                         yield spec
