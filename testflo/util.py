@@ -7,7 +7,6 @@ import sys
 import itertools
 import inspect
 import warnings
-import json
 
 from six import string_types, PY3
 from six.moves.configparser import ConfigParser
@@ -61,6 +60,10 @@ def _get_parser():
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "
                           "which tests would have been run.")
+    parser.add_argument('--hide_warnings', action='store_true',
+                        dest='hide_warnings',
+                        help="If True, don't display warnings unless running "
+                             "in verbose mode. This also hides skip messages.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess.")
     parser.add_argument('--nompi', action='store_true', dest='nompi',
@@ -69,6 +72,10 @@ def _get_parser():
     parser.add_argument('--port', action='store', dest='port',
                         default=50000, type=int,
                         help='Specifies the port used for the server that is '
+                             'used to run isolated tests.')
+    parser.add_argument('--authkey', action='store', dest='authkey',
+                        default='foo', type=str,
+                        help='Specifies the authkey used for the server that is '
                              'used to run isolated tests.')
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
                         help="Stop after the first test failure, or as soon as possible"

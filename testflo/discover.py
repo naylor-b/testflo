@@ -21,9 +21,8 @@ class TestDiscoverer(object):
         self.dir_exclude = dir_exclude
 
     def get_iter(self, input_iter):
-        """Returns an iterator over 'specific' testspec
-        strings based on the starting list of
-        directories/modules/testspecs.
+        """Returns an iterator of Test objects
+        based on the starting list of directories/modules/testspecs.
         """
         seen = set()
         for test in input_iter:
@@ -33,13 +32,14 @@ class TestDiscoverer(object):
                 itr = self._testspec_iter
 
             for result in itr(test):
-                if result not in seen:
-                    seen.add(result)
+                if result.spec not in seen:
+                    seen.add(result.spec)
                     yield result
 
     def _dir_iter(self, dname):
         """Iterate over all tests in modules found in the given
-        directory and its subdirectories.
+        directory and its subdirectories. Returns an iterator
+        of Test objects.
         """
         for f in find_files(dname,
                             match=self.module_pattern,
@@ -49,7 +49,9 @@ class TestDiscoverer(object):
                     yield result
 
     def _module_iter(self, filename):
-        """Iterate over all testspecs in a module."""
+        """Returns an iterator of Test objects for the contents of
+        the given python module file.
+        """
 
         try:
             fname, mod = get_module(filename)
@@ -71,7 +73,9 @@ class TestDiscoverer(object):
                             yield Test(':'.join((filename, obj.__name__)))
 
     def _testcase_iter(self, fname, testcase):
-        """Iterate over all testspecs found in a TestCase class."""
+        """Returns an iterator of Test objects coming from a given
+        TestCase class.
+        """
 
         methods = []
         for name, method in inspect.getmembers(testcase, ismethod):
@@ -82,7 +86,7 @@ class TestDiscoverer(object):
             yield Test(m)
 
     def _testspec_iter(self, testspec):
-        """Iterate over expanded testspec strings found in the
+        """Returns an iterator of Test objects found in the
         module/testcase/method specified in testspec.  The format of
         testspec is one of the following:
             <module>

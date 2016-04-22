@@ -1,21 +1,24 @@
 
 """
-This is meant to be executed using mpirun.
+This is meant to be executed using mpirun.  It is called as a subprocess
+to run an MPI test.
 
 """
+
+exit_codes = {
+    'OK': 0,
+    'SKIP': 42,
+    'FAIL': 43,
+}
 
 if __name__ == '__main__':
     import sys
     import os
     import traceback
-    import json
 
     from multiprocessing.managers import SyncManager
-    from multiprocessing import Process, Queue
 
     from mpi4py import MPI
-    from testflo.util import _get_parser, get_memory_usage
-    from testflo.runner import TestRunner, exit_codes
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.options import get_options

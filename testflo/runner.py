@@ -1,5 +1,5 @@
 """
-Methods and class for running tests serially or concurrently.
+Methods and class for running tests.
 """
 
 import os
@@ -12,12 +12,21 @@ from testflo.profile import save_profile
 import testflo.profile
 from testflo.test import Test
 
-exit_codes = {
-    'OK': 0,
-    'SKIP': 42,
-    'FAIL': 43,
-}
 
+def _run_single_test(test, q):
+    test.run()
+    q.put(test)
+
+def run_isolated(test, q):
+    """This runs the test in a subprocess,
+    then puts the Test object on the queue.
+    """
+
+    p = Process(target=_run_single_test, args=(test, q))
+    p.start()
+    t = q.get()
+    p.join()
+    q.put(t)
 
 def worker(server, test_queue, done_queue, worker_id):
     """This is used by concurrent test processes. It takes a test

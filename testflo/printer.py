@@ -2,13 +2,21 @@
 import sys
 
 from testflo.util import elapsed_str
+from testflo.options import get_options
+
+options = get_options()
+
+_result_map = {
+    'FAIL': 'F',
+    'SKIP': 'S',
+    'OK': '.',
+}
 
 class ResultPrinter(object):
     """Prints the status and error message (if any) of each Test object
     after its test has been run if verbose is True.  If verbose is False,
-    it displays a dot for each successful test, an 'S' for skipped tests,
-    and an 'F' for failed tests.  If a test fails, the error message is always
-    displayed, even in non-verbose mode.
+    it displays a dot for each successful test, but skips or failures are
+    still displayed in verbose form.
     """
 
     def __init__(self, stream=sys.stdout, verbose=False):
@@ -32,7 +40,7 @@ class ResultPrinter(object):
         else:
             run_type = ''
 
-        if self.verbose or result.err_msg:
+        if self.verbose or (result.err_msg and not options.hide_warnings):
             if result.err_msg:
                 stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
                                                      run_type,
@@ -46,7 +54,7 @@ class ResultPrinter(object):
                                                     result.spec,
                                                     result.status,
                                                     stats, result.memory_usage))
-        elif result.status == 'OK':
-            stream.write('.')
+        else:
+            stream.write(_result_map[result.status])
 
         stream.flush()

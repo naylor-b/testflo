@@ -4,9 +4,9 @@ results.
 
 testflo is simple enough that it should be easy to modify
 or extend.  Its API consists of a single callable that takes
-an input iterator as an argument and returns an output iterator.  The
-source of the pipeline is allowed to be a plain python iterator
-since it doesn't need an input iterator.
+an input iterator of Test objects as an argument and returns an
+output iterator of Test objects.  The source of the pipeline is allowed to
+be a plain python iterator since it doesn't need an input iterator.
 
 The pipeline starts with an iterator of strings that I'll call
 'general test specifiers'.  These can have any of the following forms:
@@ -21,19 +21,15 @@ python file containing the test(s) or the python module path, e.g.,
 'foo.bar.baz'.
 
 The general test specifiers are iterated over by the TestDiscoverer, who
-generates an output iterator of 'specific test specifiers', which are of
-the forms:
+generates an output iterator of Test objects. There is a Test object for each
+individual test.
 
-<file path>:<TestCase class name>.<method name>
-<file path>:<function name>
-
-Basically, there is one specific test specifier for each individual test.
 An iterator of those is passed on to the TestRunner.  The TestRunner
-executes the test, creates a TestResult object and passes an iterator
-of those to the ResultPrinter, who then passes them on to the ResultSummary.
+executes the test and passes an iterator of those to the ResultPrinter,
+who then passes them on to the ResultSummary.
 
 The multiprocessing library is used in the TestRunner to support concurrent
-execution of tests.  It adds test specifiers to a shared Queue that the
-worker processes pull from. Then the workers place TestResult objects in
+execution of tests.  It adds Test objects to a shared Queue that the
+worker processes pull from. Then the workers place the finished Test objects in
 a 'done' Queue that the TestRunner pulls from and passes downstream for
 display, summary, or whatever.

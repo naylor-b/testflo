@@ -6,6 +6,7 @@ import inspect
 import unittest
 import subprocess
 
+from types import FunctionType, ModuleType
 from six.moves import cStringIO
 
 from testflo.cover import start_coverage, stop_coverage
@@ -18,7 +19,7 @@ from testflo.options import get_options
 class Test(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
-    start/end times and optionally resource usage data.
+    start/end times and resource usage data.
     """
 
     def __init__(self, testspec, status=None, err_msg=''):
@@ -66,12 +67,12 @@ class Test(object):
 
         return parent, method, nprocs
 
-    def run_isolated(self, server):
+    def _run_isolated(self, server):
         q = server.get_queue()
         server.run_test(self, q)
         return q.get()
 
-    def run_mpi(self, server):
+    def _run_mpi(self, server):
         """This runs the test using mpirun in a subprocess,
         then returns the Test object.
         """
@@ -125,9 +126,9 @@ class Test(object):
 
         if server is not None:
             if self.mpi and self.nprocs > 0:
-                return self.run_mpi(server)
+                return self._run_mpi(server)
             elif self.isolated:
-                return self.run_isolated(server)
+                return self._run_isolated(server)
 
         # this is for test files without an __init__ file.  This MUST
         # be done before the call to _get_test_parent.
@@ -137,7 +138,7 @@ class Test(object):
 
         parent, method, _ = self._get_test_parent()
 
-        if issubclass(parent, unittest.TestCase):
+        if not isinstance(parent, ModuleType) and issubclass(parent, unittest.TestCase):
             parent = parent(methodName=method)
 
         if self.nocapture:
@@ -249,7 +250,7 @@ def _parse_test_path(testspec):
                 if not ismethod(meth):
                     raise TypeError("'%s' is not a method." % rest)
         elif isinstance(obj, FunctionType):
-            method = obj
+            method = obj.__name__
         else:
             raise TypeError("'%s' is not a TestCase or a function." %
                             objname)

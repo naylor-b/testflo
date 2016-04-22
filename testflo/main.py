@@ -4,14 +4,22 @@ specifier names e.g., <test_module>:<testcase>.<test_method>, and feeds
 them through a pipeline of iterators that operate on them and transform them
 into Test objects, then pass them on to other objects in the pipeline.
 
-The objects passed through the pipline are either strings that
-indicate which test to run (test specifiers), or Test
-objects, which contain the test specifier string, a status indicating
+The Discoverer object takes an initial list of directory names, module names,
+or test specifier strings and returns an iterator of Test objects representing
+all of the tests found.  The rest of the pipeline operates on these Test
+objects, which contain a test specifier string, a status indicating
 whether the test passed or failed, and captured stderr from the
 running of the test.
 
-The API necessary for objects that participate in the pipeline is a callable
-that takes an input iterator and returns an output iterator.
+The only real API function for objects added to the pipline is:
+
+    def get_iter(self, input_iter)
+
+Functions can also be added directly to the pipeline as long as they
+take a Test object iterator as an arg and return a Test object iterator.
+
+The get_iter function should expect to receive an iterator over Test objects
+and should return an iterator over Test objects.
 
 """
 from __future__ import print_function
@@ -27,8 +35,7 @@ from multiprocessing.managers import SyncManager
 from multiprocessing import Process, Queue
 #import Queue
 
-from testflo.runner import ConcurrentTestRunner
-from testflo.isolated import run_isolated
+from testflo.runner import ConcurrentTestRunner, run_isolated
 from testflo.test import Test
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
@@ -41,8 +48,7 @@ from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
 
-# create a server (but don't start it yet) to let us share a queue with tests
-# running in subprocesses.
+options = get_options()
 
 class _DictHandler(object):
     def __init__(self):
@@ -65,7 +71,11 @@ queue = Queue()
 QueueManager.register('get_queue', callable=lambda:queue)
 QueueManager.register('dict_handler', callable=lambda:_dict_handler)
 QueueManager.register('run_test', run_isolated)
-_server = QueueManager(address=('', get_options().port), authkey=b'foo')
+
+# create a server (but don't start it yet) to let us share a queue with tests
+# running in subprocesses.
+_server = QueueManager(address=('', options.port),
+                       authkey=bytes(options.authkey))
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants
@@ -97,11 +107,7 @@ def run_pipeline(source, pipe):
 
     return return_code
 
-runner = None
-
 def main(args=None):
-    global runner
-
     # FIXME: get rid of this
     if args is None:
         args = sys.argv[1:]
@@ -156,47 +162,46 @@ skip_dirs=site-packages,
     if options.isolated or not options.nompi:
         _server.start()
 
-    retval = 0
-    with open(options.outfile, 'w') as report, benchmark_file as bdata:
-        pipeline = [
-            discoverer.get_iter,
-        ]
+    try:
+        retval = 0
+        with open(options.outfile, 'w') as report, benchmark_file as bdata:
+            pipeline = [
+                discoverer.get_iter,
+            ]
 
-        if options.dryrun:
-            pipeline.extend([
-                dryrun,
-            ])
-        else:
-            runner = ConcurrentTestRunner(options, server=_server)
-
-            pipeline.append(runner.get_iter)
-
-            if options.benchmark:
+            if options.dryrun:
                 pipeline.extend([
-                    BenchmarkWriter(stream=bdata).get_iter,
+                    dryrun,
                 ])
+            else:
+                runner = ConcurrentTestRunner(options, server=_server)
 
-            pipeline.extend([
-                ResultPrinter(verbose=options.verbose).get_iter,
-                ResultSummary(options).get_iter,
-            ])
-            if not options.noreport:
-                # mirror results and summary to a report file
+                pipeline.append(runner.get_iter)
+
+                if options.benchmark:
+                    pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
+
                 pipeline.extend([
-                    ResultPrinter(report, verbose=options.verbose).get_iter,
-                    ResultSummary(options, stream=report).get_iter,
+                    ResultPrinter(verbose=options.verbose).get_iter,
+                    ResultSummary(options).get_iter,
                 ])
+                if not options.noreport:
+                    # mirror results and summary to a report file
+                    pipeline.extend([
+                        ResultPrinter(report, verbose=options.verbose).get_iter,
+                        ResultSummary(options, stream=report).get_iter,
+                    ])
 
-        if options.maxtime > 0:
-            pipeline.append(TimeFilter(options.maxtime).get_iter)
+            if options.maxtime > 0:
+                pipeline.append(TimeFilter(options.maxtime).get_iter)
 
-        retval = run_pipeline(tests, pipeline)
+            retval = run_pipeline(tests, pipeline)
 
-        finalize_coverage(options)
-        finalize_profile(options)
-
-    if options.isolated or not options.nompi:
-        _server.shutdown() # shut down the isolation server
+            finalize_coverage(options)
+            finalize_profile(options)
+    finally:
+        if options.isolated or not options.nompi:
+            _server.shutdown() # shut down the isolation server
 
     return retval
 
