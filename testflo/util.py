@@ -352,6 +352,66 @@ def elapsed_str(elapsed):
 
 
 
+def _run_single_test(test, q):
+    test.run()
+    q.put(test)
+
+def run_isolated(test, q):
+    """This runs the test in a subprocess,
+    then puts the Test object on the queue.
+    """
+
+    p = Process(target=_run_single_test, args=(test, q))
+    p.start()
+    t = q.get()
+    p.join()
+    q.put(t)
+
+def get_server_manager(port, authkey):
+    from multiprocessing.managers import SyncManager
+    from multiprocessing import Queue
+
+    class QueueManager(SyncManager):
+        pass
+
+    class _DictHandler(object):
+        def __init__(self):
+            self.dct = {}
+
+        def get_item(self, name):
+            return self.dct[name]
+
+        def set_item(self, name, obj):
+            self.dct[name] = obj
+
+        def remove_item(self, name):
+            del self.dct[name]
+
+    queue = Queue()
+    _server = None
+    _dict_handler = _DictHandler()
+
+    QueueManager.register('get_queue', callable=lambda:queue)
+    QueueManager.register('dict_handler', callable=lambda:_dict_handler)
+    QueueManager.register('run_test', run_isolated)
+
+    # create a server (but don't start it yet) to let us share a queue with tests
+    # running in subprocesses.
+    manager = QueueManager(address=('', port), authkey=bytes(authkey))
+    return manager
+
+def get_client_manager(port, authkey):
+    from multiprocessing.managers import SyncManager
+
+    class QueueManager(SyncManager): pass
+
+    QueueManager.register('get_queue')
+    QueueManager.register('run_test')
+    QueueManager.register('dict_handler')
+    manager = QueueManager(address=('', port), authkey=bytes(authkey))
+    manager.connect()
+    return manager
+
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
     def ismethod(obj):

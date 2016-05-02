@@ -31,11 +31,7 @@ import time
 
 from fnmatch import fnmatch
 
-from multiprocessing.managers import SyncManager
-from multiprocessing import Process, Queue
-#import Queue
-
-from testflo.runner import ConcurrentTestRunner, run_isolated
+from testflo.runner import ConcurrentTestRunner, TestRunner
 from testflo.test import Test
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
@@ -43,39 +39,13 @@ from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser
+from testflo.util import read_config_file, read_test_file, _get_parser, get_server_manager
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
 
 options = get_options()
 
-class _DictHandler(object):
-    def __init__(self):
-        self.dct = {}
-
-    def get_item(self, name):
-        return self.dct[name]
-
-    def set_item(self, name, obj):
-        self.dct[name] = obj
-
-    def remove_item(self, name):
-        del self.dct[name]
-
-_dict_handler = _DictHandler()
-
-class QueueManager(SyncManager): pass
-
-queue = Queue()
-QueueManager.register('get_queue', callable=lambda:queue)
-QueueManager.register('dict_handler', callable=lambda:_dict_handler)
-QueueManager.register('run_test', run_isolated)
-
-# create a server (but don't start it yet) to let us share a queue with tests
-# running in subprocesses.
-_server = QueueManager(address=('', options.port),
-                       authkey=bytes(options.authkey))
 
 def dryrun(input_iter):
     """Iterator added to the pipeline when user only wants
@@ -159,11 +129,10 @@ skip_dirs=site-packages,
         discoverer = TestDiscoverer(dir_exclude=dir_exclude)
         benchmark_file = open(os.devnull, 'a')
 
-    if options.isolated or not options.nompi:
-        _server.start()
-
     try:
         retval = 0
+        _server = None
+
         with open(options.outfile, 'w') as report, benchmark_file as bdata:
             pipeline = [
                 discoverer.get_iter,
@@ -174,7 +143,7 @@ skip_dirs=site-packages,
                     dryrun,
                 ])
             else:
-                runner = ConcurrentTestRunner(options, server=_server)
+                runner = ConcurrentTestRunner(options)
 
                 pipeline.append(runner.get_iter)
 
@@ -195,12 +164,17 @@ skip_dirs=site-packages,
             if options.maxtime > 0:
                 pipeline.append(TimeFilter(options.maxtime).get_iter)
 
+            if options.isolated or not options.nompi:
+                _server = get_server_manager(options.port, options.authkey)
+                _server.start()
+                TestRunner._server = _server
+
             retval = run_pipeline(tests, pipeline)
 
             finalize_coverage(options)
             finalize_profile(options)
     finally:
-        if options.isolated or not options.nompi:
+        if _server is not None and options.isolated or not options.nompi:
             _server.shutdown() # shut down the isolation server
 
     return retval

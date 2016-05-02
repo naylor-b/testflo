@@ -22,19 +22,13 @@ if __name__ == '__main__':
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.options import get_options
+    from testflo.util import get_client_manager
 
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
 
-    # connect to the shared queue and dict
-    class QueueManager(SyncManager): pass
-
-    QueueManager.register('get_queue')
-    QueueManager.register('run_test')
-    QueueManager.register('dict_handler')
-    manager = QueueManager(address=('', get_options().port), authkey=b'foo')
-    manager.connect()
+    manager = get_client_manager(get_options().port, b'foo')
     d = manager.dict_handler()  # test objects keyed by test spec
     q = None
 

@@ -11,28 +11,15 @@ from testflo.cover import setup_coverage, save_coverage
 from testflo.profile import save_profile
 import testflo.profile
 from testflo.test import Test
+from testflo.options import get_options
+from testflo.util import get_client_manager
 
-
-def _run_single_test(test, q):
-    test.run()
-    q.put(test)
-
-def run_isolated(test, q):
-    """This runs the test in a subprocess,
-    then puts the Test object on the queue.
-    """
-
-    p = Process(target=_run_single_test, args=(test, q))
-    p.start()
-    t = q.get()
-    p.join()
-    q.put(t)
-
-def worker(server, test_queue, done_queue, worker_id):
+def worker(test_queue, done_queue, worker_id):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the Test object
     on the done_queue.
     """
+    server = get_client_manager(get_options().port, get_options().authkey)
 
     # need a unique profile output file for each worker process
     testflo.profile._prof_file = 'profile_%s.out' % worker_id
@@ -56,17 +43,17 @@ def worker(server, test_queue, done_queue, worker_id):
 
 
 class TestRunner(object):
-    def __init__(self, options, server):
+    _server = None
+
+    def __init__(self, options):
         self.stop = options.stop
-        self.server = server
         setup_coverage(options)
 
     def get_iter(self, input_iter):
         """Run tests serially."""
 
-        server = self.server
         for test in input_iter:
-            result = test.run(server)
+            result = test.run(self._server)
             yield result
             if self.stop and result.status == 'FAIL':
                 break
@@ -79,8 +66,8 @@ class ConcurrentTestRunner(TestRunner):
     to execute tests concurrently.
     """
 
-    def __init__(self, options, server):
-        super(ConcurrentTestRunner, self).__init__(options, server)
+    def __init__(self, options):
+        super(ConcurrentTestRunner, self).__init__(options)
         self.num_procs = options.num_procs
 
         # only do concurrent stuff if num_procs > 1
@@ -97,7 +84,7 @@ class ConcurrentTestRunner(TestRunner):
             for i in range(self.num_procs):
                 worker_id = "%d_%d" % (os.getpid(), i)
                 self.procs.append(Process(target=worker,
-                                          args=(server, self.task_queue,
+                                          args=(self.task_queue,
                                                 self.done_queue, worker_id)))
 
             for proc in self.procs:
