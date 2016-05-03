@@ -40,7 +40,7 @@ class ResultPrinter(object):
         else:
             run_type = ''
 
-        if self.verbose or (result.err_msg and not options.hide_warnings):
+        if self.verbose:
             if result.err_msg:
                 stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
                                                      run_type,

@@ -55,15 +55,11 @@ def _get_parser():
                         metavar='OUTFILE', default='test_report.out',
                         help='Name of test report file.  Default is test_report.out.')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='Include testspec and elapsed time in '
-                             'screen output.')
+                        help="Include testspec and elapsed time in "
+                             "screen output. Also shows all stderr output, even if test doesn't fail")
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "
                           "which tests would have been run.")
-    parser.add_argument('--hide_warnings', action='store_true',
-                        dest='hide_warnings',
-                        help="If True, don't display warnings unless running "
-                             "in verbose mode. This also hides skip messages.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess.")
     parser.add_argument('--nompi', action='store_true', dest='nompi',
@@ -350,67 +346,6 @@ def elapsed_str(elapsed):
     elapsed -= (mins * 60)
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
-
-
-def _run_single_test(test, q):
-    test.run()
-    q.put(test)
-
-def run_isolated(test, q):
-    """This runs the test in a subprocess,
-    then puts the Test object on the queue.
-    """
-
-    p = Process(target=_run_single_test, args=(test, q))
-    p.start()
-    t = q.get()
-    p.join()
-    q.put(t)
-
-def get_server_manager(port, authkey):
-    from multiprocessing.managers import SyncManager
-    from multiprocessing import Queue
-
-    class QueueManager(SyncManager):
-        pass
-
-    class _DictHandler(object):
-        def __init__(self):
-            self.dct = {}
-
-        def get_item(self, name):
-            return self.dct[name]
-
-        def set_item(self, name, obj):
-            self.dct[name] = obj
-
-        def remove_item(self, name):
-            del self.dct[name]
-
-    queue = Queue()
-    _server = None
-    _dict_handler = _DictHandler()
-
-    QueueManager.register('get_queue', callable=lambda:queue)
-    QueueManager.register('dict_handler', callable=lambda:_dict_handler)
-    QueueManager.register('run_test', run_isolated)
-
-    # create a server (but don't start it yet) to let us share a queue with tests
-    # running in subprocesses.
-    manager = QueueManager(address=('', port), authkey=bytes(authkey))
-    return manager
-
-def get_client_manager(port, authkey):
-    from multiprocessing.managers import SyncManager
-
-    class QueueManager(SyncManager): pass
-
-    QueueManager.register('get_queue')
-    QueueManager.register('run_test')
-    QueueManager.register('dict_handler')
-    manager = QueueManager(address=('', port), authkey=bytes(authkey))
-    manager.connect()
-    return manager
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

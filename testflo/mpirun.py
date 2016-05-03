@@ -22,7 +22,7 @@ if __name__ == '__main__':
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.options import get_options
-    from testflo.util import get_client_manager
+    from testflo.qman import get_client_manager
 
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,

@@ -12,7 +12,7 @@ from testflo.profile import save_profile
 import testflo.profile
 from testflo.test import Test
 from testflo.options import get_options
-from testflo.util import get_client_manager
+from testflo.qman import get_client_manager
 
 def worker(test_queue, done_queue, worker_id):
     """This is used by concurrent test processes. It takes a test

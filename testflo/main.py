@@ -28,6 +28,7 @@ import os
 import sys
 import six
 import time
+import subprocess
 
 from fnmatch import fnmatch
 
@@ -39,7 +40,7 @@ from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser, get_server_manager
+from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
@@ -76,6 +77,7 @@ def run_pipeline(source, pipe):
             return_code = 1
 
     return return_code
+
 
 def main(args=None):
     # FIXME: get rid of this
@@ -131,7 +133,14 @@ skip_dirs=site-packages,
 
     try:
         retval = 0
-        _server = None
+        server_proc = None
+
+        if options.isolated or not options.nompi:
+            cmd = [sys.executable,
+                   os.path.join(os.path.dirname(__file__), 'qman.py'),
+                   str(options.port)]
+            server_proc = subprocess.Popen(cmd, env=os.environ)
+            sys.stdout.flush()
 
         with open(options.outfile, 'w') as report, benchmark_file as bdata:
             pipeline = [
@@ -164,18 +173,13 @@ skip_dirs=site-packages,
             if options.maxtime > 0:
                 pipeline.append(TimeFilter(options.maxtime).get_iter)
 
-            if options.isolated or not options.nompi:
-                _server = get_server_manager(options.port, options.authkey)
-                _server.start()
-                TestRunner._server = _server
-
             retval = run_pipeline(tests, pipeline)
 
             finalize_coverage(options)
             finalize_profile(options)
     finally:
-        if _server is not None and options.isolated or not options.nompi:
-            _server.shutdown() # shut down the isolation server
+        if server_proc is not None and options.isolated or not options.nompi:
+            server_proc.terminate()
 
     return retval
 
