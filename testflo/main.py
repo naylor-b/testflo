@@ -40,7 +40,7 @@ from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
 from testflo.timefilt import TimeFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser
+from testflo.util import read_config_file, read_test_file, _get_parser, get_open_address
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
@@ -136,11 +136,25 @@ skip_dirs=site-packages,
         server_proc = None
 
         if options.isolated or not options.nompi:
+            addr = get_open_address()
+            authkey = 'foo'
+
             cmd = [sys.executable,
-                   os.path.join(os.path.dirname(__file__), 'qman.py'),
-                   str(options.port)]
+                   os.path.join(os.path.dirname(__file__), 'qman.py')]
+            if 'win' in sys.platform:
+                cmd.extend((addr, authkey))
+            else:
+                cmd.extend((addr[0], str(addr[1]), authkey))
+
             server_proc = subprocess.Popen(cmd, env=os.environ)
-            sys.stdout.flush()
+
+            if 'win' in sys.platform:
+                # wait for named pipe to exist before we continue and let
+                # clients try to connect
+                while True:
+                    if os.path.exists(addr):
+                        break
+                    time.sleep(.1)
 
         with open(options.outfile, 'w') as report, benchmark_file as bdata:
             pipeline = [
@@ -152,7 +166,7 @@ skip_dirs=site-packages,
                     dryrun,
                 ])
             else:
-                runner = ConcurrentTestRunner(options)
+                runner = ConcurrentTestRunner(options, addr, authkey)
 
                 pipeline.append(runner.get_iter)
 

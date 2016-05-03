@@ -16,6 +16,13 @@ from testflo.util import get_module, ismethod, get_memory_usage
 from testflo.devnull import DevNull
 from testflo.options import get_options
 
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
+
+options = get_options()
+
 class Test(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
@@ -31,7 +38,6 @@ class Test(object):
         self.start_time = 0
         self.end_time = 0
 
-        options = get_options()
         self.nocapture = options.nocapture
         self.isolated = options.isolated
         self.mpi = not options.nompi
@@ -91,7 +97,7 @@ class Test(object):
             cmd = [mpirun_exe, '-n', str(self.nprocs),
                    sys.executable,
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
-                   self.spec]
+                   self.spec, options.port, options.authkey]
 
             # put test object in shared dictionary so all MPI procs can get it
             dct = server.dict_handler()
@@ -125,7 +131,7 @@ class Test(object):
             return self
 
         if server is not None:
-            if self.mpi and self.nprocs > 0:
+            if MPI is not None and self.mpi and self.nprocs > 0:
                 return self._run_mpi(server)
             elif self.isolated:
                 return self._run_isolated(server)
@@ -133,8 +139,6 @@ class Test(object):
         # this is for test files without an __init__ file.  This MUST
         # be done before the call to _get_test_parent.
         sys.path.insert(0, os.path.dirname(self.spec.split(':',1)[0]))
-
-        self.start_time = time.time()
 
         parent, method, _ = self._get_test_parent()
 
@@ -160,6 +164,8 @@ class Test(object):
             sys.stderr = errstream
 
             start_coverage()
+
+            self.start_time = time.time()
 
             # if there's a setUp method, run it
             if setup:

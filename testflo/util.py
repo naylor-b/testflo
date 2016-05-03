@@ -16,6 +16,9 @@ try:
 except ImportError:
     pass
 
+from multiprocessing.connection import arbitrary_address
+import socket
+
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile,  abspath, split, splitext
 
@@ -287,7 +290,7 @@ def get_module(fname):
             __import__(modpath)
             mod = sys.modules[modpath]
             # don't keep this module around in sys.modules
-            del sys.modules[modpath]
+            #del sys.modules[modpath]
         finally:
             sys.path = oldpath
     finally:
@@ -346,6 +349,27 @@ def elapsed_str(elapsed):
     elapsed -= (mins * 60)
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
+def get_open_address():
+    """Return an open address to use for a multiprocessing manager."""
+    if 'win' in sys.platform:
+        return arbitrary_address("AF_PIPE")
+    else:
+        s = socket.socket(socket.AF_INET)
+        s.bind(('localhost', 0))
+        addr = s.getsockname()
+        s.close()
+        return addr
+
+def get_addr_auth_from_args(args):
+    """Determine address and authkey based on command line args."""
+    if 'win' in sys.platform:
+        address = bytes(args[0])
+        authkey = bytes(args[1])
+    else:
+        address = (bytes(args[0]), int(args[1]))
+        authkey = bytes(args[2])
+
+    return address, authkey
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

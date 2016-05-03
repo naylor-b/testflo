@@ -28,14 +28,15 @@ if __name__ == '__main__':
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
 
-    manager = get_client_manager(get_options().port, b'foo')
-    d = manager.dict_handler()  # test objects keyed by test spec
+    address, authkey = get_addr_auth_from_args(sys.argv[2:])
+
+    manager = get_client_manager(address, authkey)
     q = None
 
     try:
         try:
             comm = MPI.COMM_WORLD
-            test = d.get_item(sys.argv[-1])
+            test = Test(sys.argv[1])
             test.run()
         except:
             print(traceback.format_exc())

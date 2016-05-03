@@ -1,7 +1,7 @@
 """
 Methods and class for running tests.
 """
-
+import sys
 import os
 
 from six import advance_iterator
@@ -14,12 +14,12 @@ from testflo.test import Test
 from testflo.options import get_options
 from testflo.qman import get_client_manager
 
-def worker(test_queue, done_queue, worker_id):
+def worker(test_queue, done_queue, worker_id, addr, authkey):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the Test object
     on the done_queue.
     """
-    server = get_client_manager(get_options().port, get_options().authkey)
+    server = get_client_manager(addr, authkey)
 
     # need a unique profile output file for each worker process
     testflo.profile._prof_file = 'profile_%s.out' % worker_id
@@ -66,7 +66,7 @@ class ConcurrentTestRunner(TestRunner):
     to execute tests concurrently.
     """
 
-    def __init__(self, options):
+    def __init__(self, options, addr, authkey):
         super(ConcurrentTestRunner, self).__init__(options)
         self.num_procs = options.num_procs
 
@@ -85,7 +85,8 @@ class ConcurrentTestRunner(TestRunner):
                 worker_id = "%d_%d" % (os.getpid(), i)
                 self.procs.append(Process(target=worker,
                                           args=(self.task_queue,
-                                                self.done_queue, worker_id)))
+                                                self.done_queue, worker_id,
+                                                addr, authkey)))
 
             for proc in self.procs:
                 proc.start()
