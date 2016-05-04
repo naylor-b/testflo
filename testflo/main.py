@@ -143,7 +143,7 @@ skip_dirs=site-packages,
 
             cmd = [sys.executable,
                    os.path.join(os.path.dirname(__file__), 'qman.py')]
-            if 'win' in sys.platform:
+            if sys.platform == 'win32':
                 cmd.extend((addr, authkey))
             else:
                 cmd.extend((addr[0], str(addr[1]), authkey))

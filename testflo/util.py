@@ -343,7 +343,7 @@ def elapsed_str(elapsed):
 
 def get_open_address():
     """Return an open address to use for a multiprocessing manager."""
-    if 'win' in sys.platform:
+    if sys.platform == 'win32':
         return arbitrary_address("AF_PIPE")
     else:
         s = socket.socket(socket.AF_INET)
@@ -360,7 +360,7 @@ def to_bytes(s):
 
 def get_addr_auth_from_args(args):
     """Determine address and authkey based on command line args."""
-    if 'win' in sys.platform:
+    if sys.platform == 'win32':
         address = args[0]
         authkey = args[1]
     else:

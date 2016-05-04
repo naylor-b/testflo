@@ -79,7 +79,7 @@ class Test(object):
         then returns the Test object.
         """
 
-        if 'win' in sys.platform:
+        if sys.platform == 'win32':
             cmd = [sys.executable,
                    os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
                    self.spec, addr, authkey]
@@ -113,7 +113,7 @@ class Test(object):
             if mpirun_exe is None:
                 raise Exception("mpirun or mpiexec was not found in the system path.")
 
-            if 'win' in sys.platform:
+            if sys.platform == 'win32':
                 cmd = [mpirun_exe, '-n', str(self.nprocs),
                        sys.executable,
                        os.path.join(os.path.dirname(__file__), 'mpirun.py'),
