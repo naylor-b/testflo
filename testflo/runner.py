@@ -32,7 +32,7 @@ def worker(test_queue, done_queue, worker_id, addr, authkey):
 
         try:
             test_count += 1
-            done_queue.put(test.run(server))
+            done_queue.put(test.run(server, addr, authkey))
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -51,16 +51,18 @@ class TestRunner(object):
     def __init__(self, options, addr, authkey):
         self.stop = options.stop
         if addr is None:
-            self._server = None
+            self._server = self._addr = self._authkey = None
         else:
             self._server = get_client_manager(addr, authkey)
+            self._addr = addr
+            self._authkey = authkey
         setup_coverage(options)
 
     def get_iter(self, input_iter):
         """Run tests serially."""
 
         for test in input_iter:
-            result = test.run(self._server)
+            result = test.run(self._server, self._addr, self._authkey)
             yield result
             if self.stop and result.status == 'FAIL':
                 break

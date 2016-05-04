@@ -8,11 +8,12 @@ import subprocess
 
 from types import FunctionType, ModuleType
 from six.moves import cStringIO
+from six import PY3
 
 from testflo.cover import start_coverage, stop_coverage
 from testflo.profile import start_profile, stop_profile
 
-from testflo.util import get_module, ismethod, get_memory_usage
+from testflo.util import get_module, ismethod, get_memory_usage, to_bytes
 from testflo.devnull import DevNull
 from testflo.options import get_options
 
@@ -73,16 +74,19 @@ class Test(object):
 
         return parent, method, nprocs
 
-    def _run_isolated(self, server):
+    def _run_isolated(self, server, addr, authkey):
         """This runs the test in a subprocess,
         then returns the Test object.
         """
-        addr = server.address
-        authkey = server._authkey
 
-        cmd = [sys.executable,
-               os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
-               self.spec, addr[0], str(addr[1]), authkey]
+        if 'win' in sys.platform:
+            cmd = [sys.executable,
+                   os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
+                   self.spec, addr, authkey]
+        else:
+            cmd = [sys.executable,
+                   os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
+                   self.spec, '"%s"'%addr[0], str(addr[1]), authkey]
 
         p = subprocess.Popen(cmd, env=os.environ)
         p.wait()
@@ -93,7 +97,7 @@ class Test(object):
 
         return result
 
-    def _run_mpi(self, server):
+    def _run_mpi(self, server, addr, authkey):
         """This runs the test using mpirun in a subprocess,
         then returns the Test object.
         """
@@ -109,13 +113,16 @@ class Test(object):
             if mpirun_exe is None:
                 raise Exception("mpirun or mpiexec was not found in the system path.")
 
-            addr = server.address
-            authkey = server._authkey
-
-            cmd = [mpirun_exe, '-n', str(self.nprocs),
-                   sys.executable,
-                   os.path.join(os.path.dirname(__file__), 'mpirun.py'),
-                   self.spec, addr[0], str(addr[1]), authkey]
+            if 'win' in sys.platform:
+                cmd = [mpirun_exe, '-n', str(self.nprocs),
+                       sys.executable,
+                       os.path.join(os.path.dirname(__file__), 'mpirun.py'),
+                       self.spec, addr, authkey]
+            else:
+                cmd = [mpirun_exe, '-n', str(self.nprocs),
+                       sys.executable,
+                       os.path.join(os.path.dirname(__file__), 'mpirun.py'),
+                       self.spec, addr[0], str(addr[1]), authkey]
 
             p = subprocess.Popen(cmd, env=os.environ)
             p.wait()
@@ -123,7 +130,6 @@ class Test(object):
             q = server.get_queue()
             result = q.get()
 
-            #dct.remove_item(self.spec) # cleanup
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -138,7 +144,7 @@ class Test(object):
 
         return result
 
-    def run(self, server=None):
+    def run(self, server=None, addr=None, authkey=None):
         """Runs the test, assuming status is not already known."""
         if self.status is not None:
             # premature failure occurred , just return
@@ -146,9 +152,9 @@ class Test(object):
 
         if server is not None:
             if MPI is not None and self.mpi and self.nprocs > 0:
-                return self._run_mpi(server)
+                return self._run_mpi(server, addr, authkey)
             elif self.isolated:
-                return self._run_isolated(server)
+                return self._run_isolated(server, addr, authkey)
 
         # this is for test files without an __init__ file.  This MUST
         # be done before the call to _get_test_parent.

@@ -352,14 +352,20 @@ def get_open_address():
         s.close()
         return addr
 
+def to_bytes(s):
+    if PY3:
+        return bytes(s, 'utf-8')
+    else:
+        return bytes(s)
+
 def get_addr_auth_from_args(args):
     """Determine address and authkey based on command line args."""
     if 'win' in sys.platform:
-        address = bytes(args[0])
-        authkey = bytes(args[1])
+        address = args[0]
+        authkey = args[1]
     else:
-        address = (bytes(args[0]), int(args[1]))
-        authkey = bytes(args[2])
+        address = (to_bytes(args[0]), int(args[1]))
+        authkey = to_bytes(args[2])
 
     return address, authkey
 

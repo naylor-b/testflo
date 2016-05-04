@@ -12,7 +12,7 @@ if __name__ == '__main__':
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.qman import get_client_manager
-    from testflo.util import get_addr_auth_from_args
+    from testflo.util import get_addr_auth_from_args, to_bytes
 
     address, authkey = get_addr_auth_from_args(sys.argv[2:])
 
