@@ -155,6 +155,8 @@ skip_dirs=site-packages,
                     if os.path.exists(addr):
                         break
                     time.sleep(.1)
+        else:
+            addr = authkey = None
 
         with open(options.outfile, 'w') as report, benchmark_file as bdata:
             pipeline = [
@@ -178,9 +180,9 @@ skip_dirs=site-packages,
                     ResultSummary(options).get_iter,
                 ])
                 if not options.noreport:
-                    # mirror results and summary to a report file
+                    # print verbose results and summary to a report file
                     pipeline.extend([
-                        ResultPrinter(report, verbose=options.verbose).get_iter,
+                        ResultPrinter(report, verbose=True).get_iter,
                         ResultSummary(options, stream=report).get_iter,
                     ])
 
@@ -192,7 +194,7 @@ skip_dirs=site-packages,
             finalize_coverage(options)
             finalize_profile(options)
     finally:
-        if server_proc is not None and options.isolated or not options.nompi:
+        if server_proc is not None and (options.isolated or not options.nompi):
             server_proc.terminate()
 
     return retval

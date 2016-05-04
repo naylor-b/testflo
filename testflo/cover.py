@@ -41,7 +41,7 @@ def save_coverage():
 def finalize_coverage(options):
     if _coverobj and options.coverpkgs:
         rank = 0
-        if options.isolated:
+        if not options.nompi:
             try:
                 from mpi4py import MPI
                 rank = MPI.COMM_WORLD.rank

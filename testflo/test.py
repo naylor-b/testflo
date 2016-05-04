@@ -74,9 +74,24 @@ class Test(object):
         return parent, method, nprocs
 
     def _run_isolated(self, server):
+        """This runs the test in a subprocess,
+        then returns the Test object.
+        """
+        addr = server.address
+        authkey = server._authkey
+
+        cmd = [sys.executable,
+               os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
+               self.spec, addr[0], str(addr[1]), authkey]
+
+        p = subprocess.Popen(cmd, env=os.environ)
+        p.wait()
+
         q = server.get_queue()
-        server.run_test(self, q)
-        return q.get()
+        result = q.get()
+        result.isolated = True
+
+        return result
 
     def _run_mpi(self, server):
         """This runs the test using mpirun in a subprocess,
@@ -94,14 +109,13 @@ class Test(object):
             if mpirun_exe is None:
                 raise Exception("mpirun or mpiexec was not found in the system path.")
 
+            addr = server.address
+            authkey = server._authkey
+
             cmd = [mpirun_exe, '-n', str(self.nprocs),
                    sys.executable,
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
-                   self.spec, options.port, options.authkey]
-
-            # put test object in shared dictionary so all MPI procs can get it
-            dct = server.dict_handler()
-            dct.set_item(self.spec, self)
+                   self.spec, addr[0], str(addr[1]), authkey]
 
             p = subprocess.Popen(cmd, env=os.environ)
             p.wait()

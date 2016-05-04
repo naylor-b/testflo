@@ -68,14 +68,6 @@ def _get_parser():
     parser.add_argument('--nompi', action='store_true', dest='nompi',
                         help="Force all tests to run without MPI. This can be useful "
                              "for debugging.")
-    parser.add_argument('--port', action='store', dest='port',
-                        default=50000, type=int,
-                        help='Specifies the port used for the server that is '
-                             'used to run isolated tests.')
-    parser.add_argument('--authkey', action='store', dest='authkey',
-                        default='foo', type=str,
-                        help='Specifies the authkey used for the server that is '
-                             'used to run isolated tests.')
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
                         help="Stop after the first test failure, or as soon as possible"
                              " when running concurrent tests.")
