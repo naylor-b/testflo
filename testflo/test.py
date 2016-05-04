@@ -86,7 +86,7 @@ class Test(object):
         else:
             cmd = [sys.executable,
                    os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
-                   self.spec, '"%s"'%addr[0], str(addr[1]), authkey]
+                   self.spec, addr[0], str(addr[1]), authkey]
 
         p = subprocess.Popen(cmd, env=os.environ)
         p.wait()
