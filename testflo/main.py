@@ -150,16 +150,6 @@ skip_dirs=site-packages,
 
             server_proc = subprocess.Popen(cmd, env=os.environ)
 
-            # if 'win' in sys.platform:
-            #     # wait for named pipe to exist before we continue and let
-            #     # clients try to connect
-            #     while True:
-            #         if os.path.exists(addr):
-            #             break
-            #         time.sleep(.1)
-            # else:
-            #     time.sleep(1)
-
             # make sure the server is up before we continue onward
             retries = 10
             man = None
