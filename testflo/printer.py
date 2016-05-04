@@ -40,7 +40,7 @@ class ResultPrinter(object):
         else:
             run_type = ''
 
-        if self.verbose:
+        if self.verbose or (result.err_msg and result.status in ('SKIP', 'FAIL')):
             if result.err_msg:
                 stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
                                                      run_type,
