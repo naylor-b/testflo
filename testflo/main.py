@@ -28,6 +28,7 @@ import os
 import sys
 import six
 import time
+import traceback
 import subprocess
 
 from fnmatch import fnmatch
@@ -44,6 +45,7 @@ from testflo.util import read_config_file, read_test_file, _get_parser, get_open
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
+from testflo.qman import get_client_manager
 
 options = get_options()
 
@@ -148,13 +150,32 @@ skip_dirs=site-packages,
 
             server_proc = subprocess.Popen(cmd, env=os.environ)
 
-            if 'win' in sys.platform:
-                # wait for named pipe to exist before we continue and let
-                # clients try to connect
-                while True:
-                    if os.path.exists(addr):
-                        break
-                    time.sleep(.1)
+            # if 'win' in sys.platform:
+            #     # wait for named pipe to exist before we continue and let
+            #     # clients try to connect
+            #     while True:
+            #         if os.path.exists(addr):
+            #             break
+            #         time.sleep(.1)
+            # else:
+            #     time.sleep(1)
+
+            # make sure the server is up before we continue onward
+            retries = 10
+            man = None
+            while retries:
+                try:
+                    man = get_client_manager(addr, authkey)
+                    break
+                except:
+                    msg = traceback.format_exc()
+                    time.sleep(0.5)
+                    retries -= 1
+
+            if man is None:
+                raise ConnectionRefusedError("Can't connect to queue server: %s"
+                                             % msg)
+            del man
         else:
             addr = authkey = None
 

@@ -10,7 +10,6 @@ subprocesses can use to report test results.
 
 import sys
 import os
-import traceback
 
 from multiprocessing.managers import SyncManager
 from multiprocessing import Queue

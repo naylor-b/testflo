@@ -364,8 +364,8 @@ def get_addr_auth_from_args(args):
         address = args[0]
         authkey = args[1]
     else:
-        address = (to_bytes(args[0]), int(args[1]))
-        authkey = to_bytes(args[2])
+        address = (args[0], int(args[1]))
+        authkey = args[2]
 
     return address, authkey
 
