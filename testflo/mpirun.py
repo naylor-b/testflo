@@ -5,12 +5,6 @@ to run an MPI test.
 
 """
 
-exit_codes = {
-    'OK': 0,
-    'SKIP': 42,
-    'FAIL': 43,
-}
-
 if __name__ == '__main__':
     import sys
     import os
@@ -50,18 +44,17 @@ if __name__ == '__main__':
 
             # check for errors and record error message
             for r in results:
-                if r.status != 'OK':
+                if test.status != 'FAIL' and r.status in ('SKIP', 'FAIL'):
                     test.err_msg = r.err_msg
-                    test.status = 'FAIL'
-                    exitcode = exit_codes[r.status]
-                    break
+                    test.status = r.status
+                    if r.status == 'FAIL':
+                        break
 
         save_coverage()
 
     except Exception:
         test.err_msg = traceback.format_exc()
         test.status = 'FAIL'
-        exitcode = exit_codes['FAIL']
 
     finally:
         sys.stdout.flush()
@@ -69,5 +62,3 @@ if __name__ == '__main__':
 
         if comm.rank == 0 and q is not None:
             q.put(test)
-
-        sys.exit(exitcode)
