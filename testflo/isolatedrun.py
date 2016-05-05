@@ -22,6 +22,7 @@ if __name__ == '__main__':
     try:
         try:
             test = Test(sys.argv[1])
+            test.nocapture = True # so we don't lose stdout
             test.run()
         except:
             print(traceback.format_exc())

@@ -4,7 +4,7 @@ import time
 import traceback
 import inspect
 import unittest
-import subprocess
+from subprocess import Popen, PIPE
 
 from types import FunctionType, ModuleType
 from six.moves import cStringIO
@@ -88,8 +88,11 @@ class Test(object):
                    os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
                    self.spec, addr[0], str(addr[1]), authkey]
 
-        p = subprocess.Popen(cmd, env=os.environ)
-        p.wait()
+        p = Popen(cmd, stdout=PIPE, stderr=PIPE, env=os.environ)
+        out, err = p.communicate()
+        if self.nocapture:
+            sys.stdout.write(out)
+            sys.stderr.write(err)
 
         q = server.get_queue()
         result = q.get()
@@ -124,8 +127,11 @@ class Test(object):
                        os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                        self.spec, addr[0], str(addr[1]), authkey]
 
-            p = subprocess.Popen(cmd, env=os.environ)
-            p.wait()
+            p = Popen(cmd, stdout=PIPE, stderr=PIPE, env=os.environ)
+            out, err = p.communicate()
+            if self.nocapture:
+                sys.stdout.write(out)
+                sys.stderr.write(err)
 
             q = server.get_queue()
             result = q.get()
