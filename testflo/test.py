@@ -211,8 +211,6 @@ class Test(object):
             self.end_time = time.time()
             self.status = status
             self.err_msg = errstream.getvalue()
-            if len(self.err_msg) > 1024:
-                self.err_msg = self.err_msg[:1024] + "...<some output deleted>"
             self.memory_usage = get_memory_usage()
 
         finally:
