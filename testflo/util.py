@@ -7,7 +7,6 @@ import sys
 import itertools
 import inspect
 import warnings
-import json
 
 from six import string_types, PY3
 from six.moves.configparser import ConfigParser
@@ -16,6 +15,9 @@ try:
     from multiprocessing import cpu_count
 except ImportError:
     pass
+
+from multiprocessing.connection import arbitrary_address
+import socket
 
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile,  abspath, split, splitext
@@ -56,14 +58,16 @@ def _get_parser():
                         metavar='OUTFILE', default='test_report.out',
                         help='Name of test report file.  Default is test_report.out.')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
-                        help='Include testspec and elapsed time in '
-                             'screen output.')
+                        help="Include testspec and elapsed time in "
+                             "screen output. Also shows all stderr output, even if test doesn't fail")
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "
                           "which tests would have been run.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
-                        help="Run each test in a separate subprocess."
-                             " This is required to run MPI tests.")
+                        help="Run each test in a separate subprocess.")
+    parser.add_argument('--nompi', action='store_true', dest='nompi',
+                        help="Force all tests to run without MPI. This can be useful "
+                             "for debugging.")
     parser.add_argument('-x', '--stop', action='store_true', dest='stop',
                         help="Stop after the first test failure, or as soon as possible"
                              " when running concurrent tests.")
@@ -278,7 +282,7 @@ def get_module(fname):
             __import__(modpath)
             mod = sys.modules[modpath]
             # don't keep this module around in sys.modules
-            del sys.modules[modpath]
+            #del sys.modules[modpath]
         finally:
             sys.path = oldpath
     finally:
@@ -329,6 +333,41 @@ def get_memory_usage():
         except:
             return 0.
 
+def elapsed_str(elapsed):
+    """return a string of the form hh:mm:sec"""
+    hrs = int(elapsed/3600)
+    elapsed -= (hrs * 3600)
+    mins = int(elapsed/60)
+    elapsed -= (mins * 60)
+    return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
+
+def get_open_address():
+    """Return an open address to use for a multiprocessing manager."""
+    if sys.platform == 'win32':
+        return arbitrary_address("AF_PIPE")
+    else:
+        s = socket.socket(socket.AF_INET)
+        s.bind(('localhost', 0))
+        addr = s.getsockname()
+        s.close()
+        return addr
+
+def to_bytes(s):
+    if PY3:
+        return bytes(s, 'utf-8')
+    else:
+        return bytes(s)
+
+def get_addr_auth_from_args(args):
+    """Determine address and authkey based on command line args."""
+    if sys.platform == 'win32':
+        address = args[0]
+        authkey = args[1]
+    else:
+        address = (args[0], int(args[1]))
+        authkey = args[2]
+
+    return address, authkey
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

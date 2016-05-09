@@ -8,8 +8,7 @@ from fnmatch import fnmatch
 from os.path import basename, dirname, isdir
 
 from testflo.util import find_files, get_module, ismethod
-from testflo.runner import get_testcase
-from testflo.result import TestResult
+from testflo.test import Test
 
 
 class TestDiscoverer(object):
@@ -22,9 +21,8 @@ class TestDiscoverer(object):
         self.dir_exclude = dir_exclude
 
     def get_iter(self, input_iter):
-        """Returns an iterator over 'specific' testspec
-        strings based on the starting list of
-        directories/modules/testspecs.
+        """Returns an iterator of Test objects
+        based on the starting list of directories/modules/testspecs.
         """
         seen = set()
         for test in input_iter:
@@ -34,13 +32,14 @@ class TestDiscoverer(object):
                 itr = self._testspec_iter
 
             for result in itr(test):
-                if result not in seen:
-                    seen.add(result)
+                if result.spec not in seen:
+                    seen.add(result.spec)
                     yield result
 
     def _dir_iter(self, dname):
         """Iterate over all tests in modules found in the given
-        directory and its subdirectories.
+        directory and its subdirectories. Returns an iterator
+        of Test objects.
         """
         for f in find_files(dname,
                             match=self.module_pattern,
@@ -50,13 +49,14 @@ class TestDiscoverer(object):
                     yield result
 
     def _module_iter(self, filename):
-        """Iterate over all testspecs in a module."""
+        """Returns an iterator of Test objects for the contents of
+        the given python module file.
+        """
 
         try:
             fname, mod = get_module(filename)
         except:
-            yield TestResult(filename, 0, 0, 'FAIL',
-                             {'err_msg': traceback.format_exc()})
+            yield Test(filename, 'FAIL', err_msg=traceback.format_exc())
         else:
             if basename(fname).startswith(six.text_type('__init__.')):
                 for result in self._dir_iter(dirname(fname)):
@@ -70,10 +70,12 @@ class TestDiscoverer(object):
 
                     elif inspect.isfunction(obj):
                         if fnmatch(name, self.func_pattern):
-                            yield ':'.join((filename, obj.__name__))
+                            yield Test(':'.join((filename, obj.__name__)))
 
     def _testcase_iter(self, fname, testcase):
-        """Iterate over all testspecs found in a TestCase class."""
+        """Returns an iterator of Test objects coming from a given
+        TestCase class.
+        """
 
         methods = []
         for name, method in inspect.getmembers(testcase, ismethod):
@@ -81,10 +83,10 @@ class TestDiscoverer(object):
                 methods.append(''.join((fname, ':', testcase.__name__,
                                                '.', method.__name__)))
         for m in sorted(methods):
-            yield m
+            yield Test(m)
 
     def _testspec_iter(self, testspec):
-        """Iterate over expanded testspec strings found in the
+        """Returns an iterator of Test objects found in the
         module/testcase/method specified in testspec.  The format of
         testspec is one of the following:
             <module>
@@ -100,21 +102,37 @@ class TestDiscoverer(object):
         if rest:
             tcasename, _, method = rest.partition('.')
             if method:
-                yield testspec
+                yield Test(testspec)
             else:  # could be a test function or a TestCase
                 try:
                     fname, mod = get_module(module)
                 except:
-                    yield TestResult(testspec, 0, 0, 'FAIL',
-                                     {'err_msg': traceback.format_exc()})
+                    yield Test(testspec, 'FAIL', err_msg=traceback.format_exc())
                     return
                 try:
                     tcase = get_testcase(fname, mod, tcasename)
                 except (AttributeError, TypeError):
-                    yield testspec
+                    yield Test(testspec)
                 else:
                     for spec in self._testcase_iter(fname, tcase):
                         yield spec
         else:
             for spec in self._module_iter(module):
                 yield spec
+
+
+def get_testcase(filename, mod, tcasename):
+    """Given a module and the name of a TestCase
+    class, return a TestCase class object or raise an exception.
+    """
+
+    try:
+        tcase = getattr(mod, tcasename)
+    except AttributeError:
+        raise AttributeError("Couldn't find TestCase '%s' in module '%s'" %
+                               (tcasename, filename))
+    if issubclass(tcase, unittest.TestCase):
+        return tcase
+    else:
+        raise TypeError("'%s' in file '%s' is not a TestCase." %
+                        (tcasename, filename))

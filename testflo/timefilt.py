@@ -1,8 +1,10 @@
 from __future__ import print_function
 
 class TimeFilter(object):
-    """This iterator saves only tests that complete successfully
-    in max_time or less.
+    """This iterator saves to the specified output file only those tests
+    that complete successfully in max_time seconds or less.  This output
+    file can later be fed into testflo to limit the tests to those in the
+    file.
     """
     def __init__(self, max_time, outfile='quicktests.in'):
         self.outfile = outfile
@@ -12,5 +14,5 @@ class TimeFilter(object):
         with open(self.outfile, 'w') as f:
             for result in input_iter:
                 if result.status == 'OK' and result.elapsed() <= self.max_time:
-                    print(result.testspec, file=f)
+                    print(result.spec, file=f)
                 yield result
