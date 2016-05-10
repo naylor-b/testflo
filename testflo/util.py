@@ -282,7 +282,7 @@ def get_module(fname):
             __import__(modpath)
             mod = sys.modules[modpath]
             # don't keep this module around in sys.modules
-            #del sys.modules[modpath]
+            del sys.modules[modpath]
         finally:
             sys.path = oldpath
     finally:
