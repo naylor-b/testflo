@@ -22,7 +22,6 @@ if __name__ == '__main__':
     address, authkey = get_addr_auth_from_args(sys.argv[2:])
 
     manager = get_client_manager(address, authkey)
-    q = None
 
     try:
         try:
@@ -38,8 +37,6 @@ if __name__ == '__main__':
         # collect results
         results = comm.gather(test, root=0)
         if comm.rank == 0:
-            q = manager.get_queue()
-
             total_mem_usage = sum(r.memory_usage for r in results)
             test.memory_usage = total_mem_usage
 
@@ -61,5 +58,5 @@ if __name__ == '__main__':
         sys.stdout.flush()
         sys.stderr.flush()
 
-        if comm.rank == 0 and q is not None:
-            q.put(test)
+        if comm.rank == 0:
+            manager.get_queue().put(test)
