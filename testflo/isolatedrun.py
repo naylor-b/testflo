@@ -17,7 +17,6 @@ if __name__ == '__main__':
     address, authkey = get_addr_auth_from_args(sys.argv[2:])
 
     manager = get_client_manager(address, authkey)
-    q = None
 
     try:
         try:
@@ -29,8 +28,6 @@ if __name__ == '__main__':
             test.status = 'FAIL'
             test.err_msg = traceback.format_exc()
 
-        q = manager.get_queue()
-
         save_coverage()
 
     except:
@@ -40,4 +37,4 @@ if __name__ == '__main__':
     sys.stdout.flush()
     sys.stderr.flush()
 
-    q.put(test)
+    manager.get_queue().put(test)
