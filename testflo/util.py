@@ -26,6 +26,7 @@ from argparse import ArgumentParser
 
 from testflo.cover import start_coverage, stop_coverage
 
+_store = {}
 
 def _get_parser():
     """Returns a parser to handle command line args."""
@@ -281,7 +282,10 @@ def get_module(fname):
         try:
             __import__(modpath)
             mod = sys.modules[modpath]
-            # don't keep this module around in sys.modules
+            # don't keep this module around in sys.modules, but
+            # keep a reference to it, else multiprocessing on Windows
+            # will have problems
+            _store[modpath] = sys.modules[modpath]
             del sys.modules[modpath]
         finally:
             sys.path = oldpath
