@@ -214,7 +214,9 @@ skip_dirs=site-packages,
             try:
                 server_proc.terminate()
             except:
-                pass
+                # send msg to stdout instead of stderr to avoid failures when
+                # testing under PowerShell.
+                print("failed to terminate queue server")
 
     return retval
 
