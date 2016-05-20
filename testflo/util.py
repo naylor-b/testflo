@@ -41,7 +41,7 @@ def _get_parser():
                         help='Path to a file containing one testspec per line.')
     parser.add_argument('--maxtime', action='store', dest='maxtime',
                         metavar='TIME_LIMIT', default=-1, type=float,
-                        help='Specifies a time limit for tests to be saved to '
+                        help='Specifies a time limit in seconds for tests to be saved to '
                              'the quicktests.in file.')
 
     try:
@@ -64,6 +64,8 @@ def _get_parser():
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "
                           "which tests would have been run.")
+    parser.add_argument('-f', '--fail', action='store_true', dest='save_fails',
+                        help="Save specs of failed tests to failtests.in file.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess.")
     parser.add_argument('--nompi', action='store_true', dest='nompi',
