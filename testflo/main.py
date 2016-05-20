@@ -39,7 +39,7 @@ from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
 from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
-from testflo.timefilt import TimeFilter
+from testflo.filters import TimeFilter, FailFilter
 
 from testflo.util import read_config_file, read_test_file, _get_parser, get_open_address
 from testflo.cover import setup_coverage, finalize_coverage
@@ -55,9 +55,11 @@ def dryrun(input_iter):
     a dry run, listing all of the discovered tests but not
     actually running them.
     """
-    for spec in input_iter:
-        print(spec)
-        yield Test(spec, 'OK')
+    for test in input_iter:
+        if test.status is None:
+            test.status = 'OK'
+        print(test)
+        yield test
 
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
@@ -200,13 +202,19 @@ skip_dirs=site-packages,
             if options.maxtime > 0:
                 pipeline.append(TimeFilter(options.maxtime).get_iter)
 
+            if options.save_fails:
+                pipeline.append(FailFilter().get_iter)
+
             retval = run_pipeline(tests, pipeline)
 
             finalize_coverage(options)
             finalize_profile(options)
     finally:
         if server_proc is not None and (options.isolated or not options.nompi):
-            server_proc.terminate()
+            try:
+                server_proc.terminate()
+            except:
+                pass
 
     return retval
 
