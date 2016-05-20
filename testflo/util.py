@@ -41,7 +41,7 @@ def _get_parser():
                         help='Path to a file containing one testspec per line.')
     parser.add_argument('--maxtime', action='store', dest='maxtime',
                         metavar='TIME_LIMIT', default=-1, type=float,
-                        help='Specifies a time limit for tests to be saved to '
+                        help='Specifies a time limit in seconds for tests to be saved to '
                              'the quicktests.in file.')
 
     try:
