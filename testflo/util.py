@@ -356,7 +356,7 @@ def get_open_address():
         s.bind(('localhost', 0))
         addr = s.getsockname()
         s.close()
-        return addr
+        return (socket.gethostname(), addr[1])
 
 def to_bytes(s):
     if PY3:
