@@ -38,7 +38,9 @@ class Test(object):
         self.nprocs = 0
         self.start_time = 0
         self.end_time = 0
-
+        self.load1m = 0.0
+        self.load5m = 0.0
+        self.load15m = 0.0
         self.nocapture = options.nocapture
         self.isolated = options.isolated
         self.mpi = not options.nompi
@@ -212,6 +214,7 @@ class Test(object):
             self.status = status
             self.err_msg = errstream.getvalue()
             self.memory_usage = get_memory_usage()
+            self.load1m, self.load5m, self.load15m = os.getloadavg()
 
         finally:
             sys.path = sys.path[1:]

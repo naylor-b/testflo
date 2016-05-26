@@ -22,6 +22,9 @@ class BenchmarkWriter(object):
             result.spec,
             result.status,
             result.elapsed(),
-            result.memory_usage
+            result.memory_usage,
+            result.load1m,
+            result.load5m,
+            result.load15m
         ))
         stream.flush()
