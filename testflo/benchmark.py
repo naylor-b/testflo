@@ -17,7 +17,7 @@ class BenchmarkWriter(object):
 
     def _write_data(self, result):
         stream = self.stream
-        stream.write('%d,%s,%s,%f,%f\n' % (
+        stream.write('%d,%s,%s,%f,%f,%f,%f,%f\n' % (
             self.timestamp,
             result.spec,
             result.status,
