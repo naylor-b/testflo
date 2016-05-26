@@ -17,11 +17,14 @@ class BenchmarkWriter(object):
 
     def _write_data(self, result):
         stream = self.stream
-        stream.write('%d,%s,%s,%f,%f\n' % (
+        stream.write('%d,%s,%s,%f,%f,%f,%f,%f\n' % (
             self.timestamp,
             result.spec,
             result.status,
             result.elapsed(),
-            result.memory_usage
+            result.memory_usage,
+            result.load1m,
+            result.load5m,
+            result.load15m
         ))
         stream.flush()
