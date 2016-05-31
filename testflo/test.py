@@ -214,7 +214,11 @@ class Test(object):
             self.status = status
             self.err_msg = errstream.getvalue()
             self.memory_usage = get_memory_usage()
-            self.load1m, self.load5m, self.load15m = os.getloadavg()
+
+            if sys.platform == 'win32':
+                self.load1m, self.load5m, self.load15m = (0.0, 0.0, 0.0)
+            else
+                self.load1m, self.load5m, self.load15m = os.getloadavg()
 
         finally:
             sys.path = sys.path[1:]
