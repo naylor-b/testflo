@@ -217,7 +217,7 @@ class Test(object):
 
             if sys.platform == 'win32':
                 self.load1m, self.load5m, self.load15m = (0.0, 0.0, 0.0)
-            else
+            else:
                 self.load1m, self.load5m, self.load15m = os.getloadavg()
 
         finally:
