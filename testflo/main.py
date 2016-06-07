@@ -165,7 +165,7 @@ skip_dirs=site-packages,
                     retries -= 1
 
             if man is None:
-                raise ConnectionRefusedError("Can't connect to queue server: %s"
+                raise RuntimeError("Can't connect to queue server: %s"
                                              % msg)
             del man
         else:
