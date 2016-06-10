@@ -61,6 +61,15 @@ def dryrun(input_iter):
         print(test)
         yield test
 
+def pre_announce(input_iter):
+    """Add this to the pipline when you want to know the name of
+    each test before it runs.  This can be useful in identifying
+    a test that hangs.
+    """
+    for test in input_iter:
+        print("    about to run %s" % test.short_name())
+        yield test
+
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
 
@@ -177,10 +186,11 @@ skip_dirs=site-packages,
             ]
 
             if options.dryrun:
-                pipeline.extend([
-                    dryrun,
-                ])
+                pipeline.append(dryrun)
             else:
+                if options.pre_announce:
+                    pipeline.append(pre_announce)
+
                 runner = ConcurrentTestRunner(options, addr, authkey)
 
                 pipeline.append(runner.get_iter)

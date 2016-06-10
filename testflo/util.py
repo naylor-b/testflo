@@ -64,6 +64,9 @@ def _get_parser():
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "
                           "which tests would have been run.")
+    parser.add_argument('--pre_announce', action='store_true', dest='pre_announce',
+                        help="Announce the name of each test before it runs. This "
+                             "can help track down a hanging test.")
     parser.add_argument('-f', '--fail', action='store_true', dest='save_fails',
                         help="Save specs of failed tests to failtests.in file.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
