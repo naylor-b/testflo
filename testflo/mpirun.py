@@ -13,15 +13,12 @@ if __name__ == '__main__':
     from mpi4py import MPI
     from testflo.test import Test
     from testflo.cover import save_coverage
-    from testflo.qman import get_client_manager
-    from testflo.util import get_addr_auth_from_args
+    from testflo.qman import get_client_queue
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
 
-    address, authkey = get_addr_auth_from_args(sys.argv[2:])
-
-    manager = get_client_manager(address, authkey)
+    queue = get_client_queue()
 
     try:
         try:
@@ -59,4 +56,4 @@ if __name__ == '__main__':
         sys.stderr.flush()
 
         if comm.rank == 0:
-            manager.get_queue().put(test)
+            queue.put(test)

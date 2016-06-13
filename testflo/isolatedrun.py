@@ -11,12 +11,9 @@ if __name__ == '__main__':
 
     from testflo.test import Test
     from testflo.cover import save_coverage
-    from testflo.qman import get_client_manager
-    from testflo.util import get_addr_auth_from_args, to_bytes
+    from testflo.qman import get_client_queue
 
-    address, authkey = get_addr_auth_from_args(sys.argv[2:])
-
-    manager = get_client_manager(address, authkey)
+    queue = get_client_queue()
 
     try:
         try:
@@ -37,4 +34,4 @@ if __name__ == '__main__':
     sys.stdout.flush()
     sys.stderr.flush()
 
-    manager.get_queue().put(test)
+    queue.put(test)

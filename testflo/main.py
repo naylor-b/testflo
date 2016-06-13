@@ -30,6 +30,8 @@ import six
 import time
 import traceback
 import subprocess
+import multiprocessing
+import cPickle as pickle
 
 from fnmatch import fnmatch
 
@@ -41,11 +43,11 @@ from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
 from testflo.filters import TimeFilter, FailFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser, get_open_address
+from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
-from testflo.qman import get_client_manager
+from testflo.qman import get_server_queue
 
 options = get_options()
 
@@ -93,7 +95,6 @@ def run_pipeline(source, pipe):
 
 
 def main(args=None):
-    # FIXME: get rid of this
     if args is None:
         args = sys.argv[1:]
 
@@ -144,89 +145,57 @@ skip_dirs=site-packages,
         discoverer = TestDiscoverer(dir_exclude=dir_exclude)
         benchmark_file = open(os.devnull, 'a')
 
-    try:
-        retval = 0
-        server_proc = None
+    retval = 0
 
-        if options.isolated or not options.nompi:
-            addr = get_open_address()
-            authkey = 'foo'
+    if options.isolated or not options.nompi:
+        # create a distributed queue and get a proxy to it
+        queue = get_server_queue()
 
-            cmd = [sys.executable,
-                   os.path.join(os.path.dirname(__file__), 'qman.py')]
-            if sys.platform == 'win32':
-                cmd.extend((addr, authkey))
-            else:
-                cmd.extend((addr[0], str(addr[1]), authkey))
+        # pickle the queue proxy and set into the env for subprocs to use
+        qpickle = pickle.dumps(queue)
+        os.environ['TESTFLO_QUEUE'] = qpickle
+    else:
+        queue = None
 
-            server_proc = subprocess.Popen(cmd, env=os.environ)
+    with open(options.outfile, 'w') as report, benchmark_file as bdata:
+        pipeline = [
+            discoverer.get_iter,
+        ]
 
-            # make sure the server is up before we continue onward
-            retries = 10
-            man = None
-            while retries:
-                try:
-                    man = get_client_manager(addr, authkey)
-                    break
-                except:
-                    msg = traceback.format_exc()
-                    time.sleep(0.5)
-                    retries -= 1
-
-            if man is None:
-                raise RuntimeError("Can't connect to queue server: %s"
-                                             % msg)
-            del man
+        if options.dryrun:
+            pipeline.append(dryrun)
         else:
-            addr = authkey = None
+            if options.pre_announce:
+                pipeline.append(pre_announce)
 
-        with open(options.outfile, 'w') as report, benchmark_file as bdata:
-            pipeline = [
-                discoverer.get_iter,
-            ]
+            runner = ConcurrentTestRunner(options, queue)
 
-            if options.dryrun:
-                pipeline.append(dryrun)
-            else:
-                if options.pre_announce:
-                    pipeline.append(pre_announce)
+            pipeline.append(runner.get_iter)
 
-                runner = ConcurrentTestRunner(options, addr, authkey)
+            if options.benchmark:
+                pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
 
-                pipeline.append(runner.get_iter)
-
-                if options.benchmark:
-                    pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
-
+            pipeline.extend([
+                ResultPrinter(verbose=options.verbose).get_iter,
+                ResultSummary(options).get_iter,
+            ])
+            if not options.noreport:
+                # print verbose results and summary to a report file
                 pipeline.extend([
-                    ResultPrinter(verbose=options.verbose).get_iter,
-                    ResultSummary(options).get_iter,
+                    ResultPrinter(report, verbose=True).get_iter,
+                    ResultSummary(options, stream=report).get_iter,
                 ])
-                if not options.noreport:
-                    # print verbose results and summary to a report file
-                    pipeline.extend([
-                        ResultPrinter(report, verbose=True).get_iter,
-                        ResultSummary(options, stream=report).get_iter,
-                    ])
 
-            if options.maxtime > 0:
-                pipeline.append(TimeFilter(options.maxtime).get_iter)
+        if options.maxtime > 0:
+            pipeline.append(TimeFilter(options.maxtime).get_iter)
 
-            if options.save_fails:
-                pipeline.append(FailFilter().get_iter)
+        if options.save_fails:
+            pipeline.append(FailFilter().get_iter)
 
-            retval = run_pipeline(tests, pipeline)
+        retval = run_pipeline(tests, pipeline)
 
-            finalize_coverage(options)
-            finalize_profile(options)
-    finally:
-        if server_proc is not None and (options.isolated or not options.nompi):
-            try:
-                server_proc.terminate()
-            except:
-                # send msg to stdout instead of stderr to avoid failures when
-                # testing under PowerShell.
-                print("failed to terminate queue server")
+        finalize_coverage(options)
+        finalize_profile(options)
 
     return retval
 

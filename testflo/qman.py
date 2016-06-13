@@ -1,39 +1,29 @@
 
-"""
-This runs a multiprocessing manager in a separate process given command
-line args indicating the adress and authkey.  This is an attempt to avoid
-some of the non-forking nonsense that comes with using multiprocessing on
-Windows. This process does nothing except maintain a shared queue that
-subprocesses can use to report test results.
-
-"""
-
 import sys
 import os
-
-from multiprocessing.managers import SyncManager
-from multiprocessing import Queue
+import cPickle as pickle
+import multiprocessing
+from multiprocessing import managers
 
 from testflo.test import Test
-from testflo.util import get_addr_auth_from_args, to_bytes
 
-class QueueManager(SyncManager):
-    pass
 
-def get_client_manager(addr, authkey):
-    QueueManager.register('get_queue')
-    manager = QueueManager(address=addr, authkey=to_bytes(authkey))
-    manager.connect()
-    return manager
+# pickling the queue proxy gets rid of the authkey, so use a fixed authkey here
+# for server and clients
+_testflo_authkey = 'fooooo'
 
-if __name__ == '__main__':
+def get_server_queue():
+    manager = managers.SyncManager(authkey=_testflo_authkey)
+    manager.start()
+    return manager.Queue()
 
-    queue = Queue()
+def get_client_queue():
+    qstr = os.environ.get('TESTFLO_QUEUE')
 
-    QueueManager.register('get_queue', callable=lambda:queue)
+    if qstr:
+        multiprocessing.current_process().authkey = _testflo_authkey
+        queue = pickle.loads(qstr)
+    else:
+        queue = None
 
-    address, authkey = get_addr_auth_from_args(sys.argv[1:])
-
-    manager = QueueManager(address=address, authkey=to_bytes(authkey))
-    server = manager.get_server()
-    server.serve_forever()
+    return queue
