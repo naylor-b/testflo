@@ -12,18 +12,14 @@ from testflo.profile import save_profile
 import testflo.profile
 from testflo.test import Test
 from testflo.options import get_options
-from testflo.qman import get_client_manager
+from testflo.qman import get_client_queue
 
-def worker(test_queue, done_queue, worker_id, addr, authkey):
+
+def worker(test_queue, done_queue, subproc_queue, worker_id):
     """This is used by concurrent test processes. It takes a test
     off of the test_queue, runs it, then puts the Test object
     on the done_queue.
     """
-    if addr is None:
-        server = None
-    else:
-        server = get_client_manager(addr, authkey)
-
     # need a unique profile output file for each worker process
     testflo.profile._prof_file = 'profile_%s.out' % worker_id
 
@@ -32,7 +28,7 @@ def worker(test_queue, done_queue, worker_id, addr, authkey):
 
         try:
             test_count += 1
-            done_queue.put(test.run(server, addr, authkey))
+            done_queue.put(test.run(subproc_queue))
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -46,23 +42,17 @@ def worker(test_queue, done_queue, worker_id, addr, authkey):
 
 
 class TestRunner(object):
-    _server = None
 
-    def __init__(self, options, addr, authkey):
+    def __init__(self, options, subproc_queue):
         self.stop = options.stop
-        if addr is None:
-            self._server = self._addr = self._authkey = None
-        else:
-            self._server = get_client_manager(addr, authkey)
-            self._addr = addr
-            self._authkey = authkey
+        self._queue = subproc_queue
         setup_coverage(options)
 
     def get_iter(self, input_iter):
         """Run tests serially."""
 
         for test in input_iter:
-            result = test.run(self._server, self._addr, self._authkey)
+            result = test.run(self._queue)
             yield result
             if self.stop and result.status == 'FAIL':
                 break
@@ -75,8 +65,8 @@ class ConcurrentTestRunner(TestRunner):
     to execute tests concurrently.
     """
 
-    def __init__(self, options, addr, authkey):
-        super(ConcurrentTestRunner, self).__init__(options, addr, authkey)
+    def __init__(self, options, subproc_queue):
+        super(ConcurrentTestRunner, self).__init__(options, subproc_queue)
         self.num_procs = options.num_procs
 
         # only do concurrent stuff if num_procs > 1
@@ -94,8 +84,8 @@ class ConcurrentTestRunner(TestRunner):
                 worker_id = "%d_%d" % (os.getpid(), i)
                 self.procs.append(Process(target=worker,
                                           args=(self.task_queue,
-                                                self.done_queue, worker_id,
-                                                addr, authkey)))
+                                                self.done_queue, subproc_queue,
+                                                worker_id)))
 
             for proc in self.procs:
                 proc.start()

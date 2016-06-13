@@ -350,34 +350,6 @@ def elapsed_str(elapsed):
     elapsed -= (mins * 60)
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
-def get_open_address():
-    """Return an open address to use for a multiprocessing manager."""
-    if sys.platform == 'win32':
-        return arbitrary_address("AF_PIPE")
-    else:
-        s = socket.socket(socket.AF_INET)
-        s.bind(('localhost', 0))
-        addr = s.getsockname()
-        s.close()
-        return (socket.gethostname(), addr[1])
-
-def to_bytes(s):
-    if PY3:
-        return bytes(s, 'utf-8')
-    else:
-        return bytes(s)
-
-def get_addr_auth_from_args(args):
-    """Determine address and authkey based on command line args."""
-    if sys.platform == 'win32':
-        address = args[0]
-        authkey = args[1]
-    else:
-        address = (args[0], int(args[1]))
-        authkey = args[2]
-
-    return address, authkey
-
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
     def ismethod(obj):
