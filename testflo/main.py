@@ -31,7 +31,7 @@ import time
 import traceback
 import subprocess
 import multiprocessing
-import cPickle as pickle
+import pickle
 
 from fnmatch import fnmatch
 
@@ -152,8 +152,8 @@ skip_dirs=site-packages,
         queue = get_server_queue()
 
         # pickle the queue proxy and set into the env for subprocs to use
-        qpickle = pickle.dumps(queue)
-        os.environ['TESTFLO_QUEUE'] = qpickle
+        qpickle = pickle.dumps(queue, 0)
+        os.environ['TESTFLO_QUEUE'] = qpickle.decode('latin1')
     else:
         queue = None
 

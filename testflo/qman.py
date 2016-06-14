@@ -1,7 +1,7 @@
 
 import sys
 import os
-import cPickle as pickle
+import pickle
 import multiprocessing
 from multiprocessing import managers
 
@@ -10,7 +10,7 @@ from testflo.test import Test
 
 # pickling the queue proxy gets rid of the authkey, so use a fixed authkey here
 # for server and clients
-_testflo_authkey = 'fooooo'
+_testflo_authkey = b'foobarxxxx'
 
 def get_server_queue():
     manager = managers.SyncManager(authkey=_testflo_authkey)
@@ -22,7 +22,7 @@ def get_client_queue():
 
     if qstr:
         multiprocessing.current_process().authkey = _testflo_authkey
-        queue = pickle.loads(qstr)
+        queue = pickle.loads(qstr.encode('latin1'))
     else:
         queue = None
 
