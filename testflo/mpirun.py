@@ -19,6 +19,7 @@ if __name__ == '__main__':
                   # MPI will terminate other processes
 
     queue = get_client_queue()
+    os.environ['TESTFLO_QUEUE'] = ''
 
     try:
         try:

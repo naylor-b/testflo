@@ -31,7 +31,6 @@ import time
 import traceback
 import subprocess
 import multiprocessing
-import pickle
 
 from fnmatch import fnmatch
 
@@ -150,10 +149,6 @@ skip_dirs=site-packages,
     if options.isolated or not options.nompi:
         # create a distributed queue and get a proxy to it
         queue = get_server_queue()
-
-        # pickle the queue proxy and set into the env for subprocs to use
-        qpickle = pickle.dumps(queue, 0)
-        os.environ['TESTFLO_QUEUE'] = qpickle.decode('latin1')
     else:
         queue = None
 

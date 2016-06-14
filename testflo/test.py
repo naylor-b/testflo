@@ -4,6 +4,7 @@ import time
 import traceback
 import inspect
 import unittest
+import pickle
 from subprocess import Popen, PIPE
 
 from types import FunctionType, ModuleType
@@ -31,6 +32,19 @@ if spawn.find_executable("mpirun") is not None:
     mpirun_exe = "mpirun"
 elif spawn.find_executable("mpiexec") is not None:
     mpirun_exe = "mpiexec"
+
+
+_env_queue = None
+
+def add_queue_to_env(queue):
+    global _env_queue
+
+    if _env_queue is None:
+        # pickle the queue proxy and set into the env for subprocs to use
+        qpickle = pickle.dumps(queue, 0)
+        _env_queue = qpickle.decode('latin1')
+
+    os.environ['TESTFLO_QUEUE'] = _env_queue
 
 
 class Test(object):
@@ -94,11 +108,15 @@ class Test(object):
                os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
                self.spec]
 
+        add_queue_to_env(queue)
+
         p = Popen(cmd, stdout=PIPE, stderr=PIPE, env=os.environ)
         out, err = p.communicate()
         if self.nocapture:
             sys.stdout.write(out)
             sys.stderr.write(err)
+
+        os.environ['TESTFLO_QUEUE'] = ''
 
         result = queue.get()
         result.isolated = True
@@ -119,11 +137,15 @@ class Test(object):
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                    self.spec]
 
+            add_queue_to_env(queue)
+
             p = Popen(cmd, stdout=PIPE, stderr=PIPE, env=os.environ)
             out, err = p.communicate()
             if self.nocapture:
                 sys.stdout.write(out)
                 sys.stderr.write(err)
+
+            os.environ['TESTFLO_QUEUE'] = ''
 
             result = queue.get()
 

@@ -14,6 +14,7 @@ if __name__ == '__main__':
     from testflo.qman import get_client_queue
 
     queue = get_client_queue()
+    os.environ['TESTFLO_QUEUE'] = ''
 
     try:
         try:
