@@ -12,14 +12,17 @@ if __name__ == '__main__':
 
     from mpi4py import MPI
     from testflo.test import Test
-    from testflo.cover import save_coverage
+    from testflo.cover import setup_coverage, save_coverage
     from testflo.qman import get_client_queue
+    from testflo.options import get_options
 
     exitcode = 0  # use 0 for exit code of all ranks != 0 because otherwise,
                   # MPI will terminate other processes
 
     queue = get_client_queue()
     os.environ['TESTFLO_QUEUE'] = ''
+
+    setup_coverage(get_options())
 
     try:
         try:

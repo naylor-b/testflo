@@ -14,7 +14,8 @@ from six import PY3
 from testflo.cover import start_coverage, stop_coverage
 from testflo.profile import start_profile, stop_profile
 
-from testflo.util import get_module, ismethod, get_memory_usage
+from testflo.util import get_module, ismethod, get_memory_usage, \
+                         _get_testflo_subproc_args
 from testflo.devnull import DevNull
 from testflo.options import get_options
 
@@ -132,10 +133,11 @@ class Test(object):
             if mpirun_exe is None:
                 raise Exception("mpirun or mpiexec was not found in the system path.")
 
+
             cmd = [mpirun_exe, '-n', str(self.nprocs),
                    sys.executable,
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
-                   self.spec]
+                   self.spec] + _get_testflo_subproc_args()
 
             add_queue_to_env(queue)
 

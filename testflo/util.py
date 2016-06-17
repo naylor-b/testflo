@@ -89,6 +89,9 @@ def _get_parser():
                         help="Add the given package to the coverage list. You"
                               " can use this option multiple times to cover"
                               " multiple packages.")
+    parser.add_argument('--cover-omit', action='append', dest='cover_omits',
+                        metavar='COVEROMIT',
+                        help="Add a file name pattern to remove it from coverage.")
     parser.add_argument('--profile', action='store_true', dest='profile',
                         help="Perform profiling.")
     parser.add_argument('--profile_port', action='store', dest='prof_port',
@@ -110,6 +113,34 @@ def _get_parser():
 
     return parser
 
+def _get_testflo_subproc_args():
+    """Gets the testflo args that should be used in subprocesses."""
+
+    cmdset = set([
+      '--nocapture',
+      '-s',
+      '--profile',
+      '--coverpkg',
+      '--coverage',
+      '--coverage-html',
+      '--cover-omit',
+    ])
+
+    keep = []
+    i = 0
+    args = sys.argv[1:]
+    argslen = len(args)
+    while i < argslen:
+        arg = args[i]
+        if arg.split('=',1)[0] in cmdset:
+            keep.append(arg)
+            if ((arg.startswith('--coverpkg') or arg.startswith('--cover-omit'))
+                        and '=' not in arg):
+                i += 1
+                keep.append(args[i])
+        i += 1
+
+    return keep
 
 def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
