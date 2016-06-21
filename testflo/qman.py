@@ -1,11 +1,8 @@
-
-import sys
 import os
 import pickle
 import multiprocessing
 from multiprocessing import managers
-
-from testflo.test import Test
+import socket
 
 
 # pickling the queue proxy gets rid of the authkey, so use a fixed authkey here
@@ -13,7 +10,7 @@ from testflo.test import Test
 _testflo_authkey = b'foobarxxxx'
 
 def get_server_queue():
-    manager = managers.SyncManager(authkey=_testflo_authkey)
+    manager = managers.SyncManager(address=(socket.gethostname(), 0), authkey=_testflo_authkey)
     manager.start()
     return manager.Queue()
 
