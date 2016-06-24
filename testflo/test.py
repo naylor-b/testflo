@@ -36,11 +36,12 @@ elif spawn.find_executable("mpiexec") is not None:
 
 
 def add_queue_to_env(queue):
+    """Store enough info in the env to be able to create a proxy to
+    the queue in a subprocess.
+    """
     addr = queue._token.address
     os.environ['TESTFLO_QUEUE'] = "%s:%s:%s" % (addr[0], addr[1],
                                                 queue._token.id)
-    #print("TESTFLO_QUEUE: %s" % os.environ['TESTFLO_QUEUE'])
-
 
 class Test(object):
     """Contains the path to the test function/method, status
