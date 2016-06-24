@@ -7,7 +7,7 @@ import os
 from six import advance_iterator
 from multiprocessing import Queue, Process
 
-from testflo.cover import setup_coverage, save_coverage
+from testflo.cover import save_coverage
 from testflo.profile import save_profile
 import testflo.profile
 from testflo.test import Test
@@ -46,7 +46,6 @@ class TestRunner(object):
     def __init__(self, options, subproc_queue):
         self.stop = options.stop
         self._queue = subproc_queue
-        setup_coverage(options)
 
     def get_iter(self, input_iter):
         """Run tests serially."""

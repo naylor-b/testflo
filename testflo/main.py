@@ -148,9 +148,9 @@ skip_dirs=site-packages,
 
     if options.isolated or not options.nompi:
         # create a distributed queue and get a proxy to it
-        queue = get_server_queue()
+        manager, queue = get_server_queue()
     else:
-        queue = None
+        manager, queue = (None, None)
 
     with open(options.outfile, 'w') as report, benchmark_file as bdata:
         pipeline = [
@@ -191,6 +191,9 @@ skip_dirs=site-packages,
 
         finalize_coverage(options)
         finalize_profile(options)
+
+        if manager is not None:
+            manager.shutdown()
 
     return retval
 
