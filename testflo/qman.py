@@ -3,7 +3,8 @@ import sys
 import os
 import pickle
 import multiprocessing
-from multiprocessing import managers
+import socket
+from multiprocessing.managers import SyncManager, RebuildProxy, AutoProxy, Token
 
 from testflo.test import Test
 
@@ -13,17 +14,27 @@ from testflo.test import Test
 _testflo_authkey = b'foobarxxxx'
 
 def get_server_queue():
-    manager = managers.SyncManager(authkey=_testflo_authkey)
+    manager = SyncManager(address=(socket.gethostname(), 0),
+                          authkey=_testflo_authkey)
     manager.start()
-    return manager.Queue()
+    q = manager.Queue()
+    return manager, q
 
 def get_client_queue():
     qstr = os.environ.get('TESTFLO_QUEUE')
 
     if qstr:
-        multiprocessing.current_process().authkey = _testflo_authkey
-        queue = pickle.loads(qstr.encode('latin1'))
+        addr0, addr1, tid = qstr.split(':')
+        tok = Token('Queue', (addr0, int(addr1)), tid)
+        #multiprocessing.current_process().authkey = _testflo_authkey
+        queue = RebuildProxy(AutoProxy, tok, 'pickle',
+                             {'authkey':_testflo_authkey})
     else:
         queue = None
 
     return queue
+
+
+# RebuildProxy(func, token, serializer, kwds)
+# AutoProxy(token, serializer, manager=None, authkey=None,
+#               exposed=None, incref=True)

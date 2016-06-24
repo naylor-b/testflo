@@ -35,17 +35,11 @@ elif spawn.find_executable("mpiexec") is not None:
     mpirun_exe = "mpiexec"
 
 
-_env_queue = None
-
 def add_queue_to_env(queue):
-    global _env_queue
-
-    if _env_queue is None:
-        # pickle the queue proxy and set into the env for subprocs to use
-        qpickle = pickle.dumps(queue, 0)
-        _env_queue = qpickle.decode('latin1')
-
-    os.environ['TESTFLO_QUEUE'] = _env_queue
+    addr = queue._token.address
+    os.environ['TESTFLO_QUEUE'] = "%s:%s:%s" % (addr[0], addr[1],
+                                                queue._token.id)
+    #print("TESTFLO_QUEUE: %s" % os.environ['TESTFLO_QUEUE'])
 
 
 class Test(object):
