@@ -161,6 +161,7 @@ skip_dirs=site-packages,
             pipeline.append(dryrun)
         else:
             if options.pre_announce:
+                options.num_procs = 1
                 pipeline.append(pre_announce)
 
             runner = ConcurrentTestRunner(options, queue)

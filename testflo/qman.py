@@ -1,4 +1,5 @@
 import os
+import sys
 import multiprocessing
 
 import socket
@@ -10,8 +11,12 @@ from multiprocessing.managers import SyncManager, RebuildProxy, AutoProxy, Token
 _testflo_authkey = b'foobarxxxx'
 
 def get_server_queue():
-    manager = SyncManager(address=(socket.gethostname(), 0),
-                          authkey=_testflo_authkey)
+    if sys.platform == 'darwin':
+        addr = 'localhost'
+    else:
+        addr = socket.gethostname()
+
+    manager = SyncManager(address=(addr, 0), authkey=_testflo_authkey)
     manager.start()
     return manager, manager.Queue()
 
