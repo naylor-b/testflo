@@ -152,6 +152,14 @@ You can install testflo directly from github using the following command:
 
 `pip install git+https://github.com/OpenMDAO/testflo.git`
 
+
+or install from PYPI using:
+
+
+`pip install testflo`
+
+
+
 If you try it out and find any problems, submit them as issues on github at
 https://github.com/OpenMDAO/testflo.
 
