@@ -42,6 +42,13 @@ def add_queue_to_env(queue):
     os.environ['TESTFLO_QUEUE'] = "%s:%s:%s" % (addr[0], addr[1],
                                                 queue._token.id)
 
+
+class FakeComm(object):
+    def __init__(self):
+        self.rank = 0
+        self.size = 1
+
+
 class Test(object):
     """Contains the path to the test function/method, status
     of the test (if finished), error and stdout messages (if any),
@@ -175,10 +182,17 @@ class Test(object):
         # be done before the call to _get_test_parent.
         sys.path.insert(0, os.path.dirname(self.spec.split(':',1)[0]))
 
-        parent, method, _ = self._get_test_parent()
+        parent, method, nprocs = self._get_test_parent()
 
         if not isinstance(parent, ModuleType) and issubclass(parent, unittest.TestCase):
             parent = parent(methodName=method)
+            # if we get here an nprocs > 0, we need
+            # to set .comm in our TestCase instance.
+            if nprocs > 0:
+                if self.mpi:
+                    parent.comm = MPI.COMM_WORLD
+                else:
+                    parent.comm = FakeComm()
 
         if self.nocapture:
             outstream = sys.stdout
