@@ -12,6 +12,5 @@ setup(name='testflo',
       entry_points="""
           [console_scripts]
           testflo=testflo.main:main
-          testflo_pview=testflo.pstats_viewer:main
       """
       )

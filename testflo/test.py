@@ -12,7 +12,6 @@ from six.moves import cStringIO
 from six import PY3
 
 from testflo.cover import start_coverage, stop_coverage
-from testflo.profile import start_profile, stop_profile
 
 from testflo.util import get_module, ismethod, get_memory_usage, \
                          _get_testflo_subproc_args
@@ -42,6 +41,13 @@ def add_queue_to_env(queue):
     addr = queue._token.address
     os.environ['TESTFLO_QUEUE'] = "%s:%s:%s" % (addr[0], addr[1],
                                                 queue._token.id)
+
+
+class FakeComm(object):
+    def __init__(self):
+        self.rank = 0
+        self.size = 1
+
 
 class Test(object):
     """Contains the path to the test function/method, status
@@ -176,10 +182,17 @@ class Test(object):
         # be done before the call to _get_test_parent.
         sys.path.insert(0, os.path.dirname(self.spec.split(':',1)[0]))
 
-        parent, method, _ = self._get_test_parent()
+        parent, method, nprocs = self._get_test_parent()
 
         if not isinstance(parent, ModuleType) and issubclass(parent, unittest.TestCase):
             parent = parent(methodName=method)
+            # if we get here an nprocs > 0, we need
+            # to set .comm in our TestCase instance.
+            if nprocs > 0:
+                if MPI is not None and self.mpi:
+                    parent.comm = MPI.COMM_WORLD
+                else:
+                    parent.comm = FakeComm()
 
         if self.nocapture:
             outstream = sys.stdout
@@ -308,7 +321,6 @@ def _try_call(method):
     """
     status = 'OK'
     try:
-        start_profile()
         method()
     except unittest.SkipTest as e:
         status = 'SKIP'
@@ -316,7 +328,5 @@ def _try_call(method):
     except:
         status = 'FAIL'
         sys.stderr.write(traceback.format_exc())
-    finally:
-        stop_profile()
 
     return status
