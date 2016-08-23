@@ -189,7 +189,7 @@ class Test(object):
             # if we get here an nprocs > 0, we need
             # to set .comm in our TestCase instance.
             if nprocs > 0:
-                if self.mpi:
+                if MPI is not None and self.mpi:
                     parent.comm = MPI.COMM_WORLD
                 else:
                     parent.comm = FakeComm()
