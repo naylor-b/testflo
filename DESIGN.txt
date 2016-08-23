@@ -1,12 +1,12 @@
-testflo is a python testing framework that uses a simple pipeline of
+testflo is a python testing framework that uses a pipeline of
 iterators to process test specifications, run the tests, and process the
 results.
 
-testflo is simple enough that it should be easy to modify
-or extend.  Its API consists of a single callable that takes
+The testflo API consists of a single callable that takes
 an input iterator of Test objects as an argument and returns an
-output iterator of Test objects.  The source of the pipeline is allowed to
-be a plain python iterator since it doesn't need an input iterator.
+output iterator of Test objects.  The source of the pipeline is a plain
+python iterator since it doesn't need an input iterator. By simply adding
+members to the testflo pipeline, it's easy to add new features.
 
 The pipeline starts with an iterator of strings that I'll call
 'general test specifiers'.  These can have any of the following forms:

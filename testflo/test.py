@@ -12,7 +12,6 @@ from six.moves import cStringIO
 from six import PY3
 
 from testflo.cover import start_coverage, stop_coverage
-from testflo.profile import start_profile, stop_profile
 
 from testflo.util import get_module, ismethod, get_memory_usage, \
                          _get_testflo_subproc_args
@@ -308,7 +307,6 @@ def _try_call(method):
     """
     status = 'OK'
     try:
-        start_profile()
         method()
     except unittest.SkipTest as e:
         status = 'SKIP'
@@ -316,7 +314,5 @@ def _try_call(method):
     except:
         status = 'FAIL'
         sys.stderr.write(traceback.format_exc())
-    finally:
-        stop_profile()
 
     return status

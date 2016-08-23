@@ -44,7 +44,6 @@ from testflo.filters import TimeFilter, FailFilter
 
 from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
-from testflo.profile import setup_profile, finalize_profile
 from testflo.options import get_options
 from testflo.qman import get_server_queue
 
@@ -131,7 +130,6 @@ skip_dirs=site-packages,
         return False
 
     setup_coverage(options)
-    setup_profile(options)
 
     if options.benchmark:
         options.num_procs = 1
@@ -191,7 +189,6 @@ skip_dirs=site-packages,
         retval = run_pipeline(tests, pipeline)
 
         finalize_coverage(options)
-        finalize_profile(options)
 
         if manager is not None:
             manager.shutdown()

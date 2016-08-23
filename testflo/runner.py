@@ -8,8 +8,6 @@ from six import advance_iterator
 from multiprocessing import Queue, Process
 
 from testflo.cover import save_coverage
-from testflo.profile import save_profile
-import testflo.profile
 from testflo.test import Test
 from testflo.options import get_options
 from testflo.qman import get_client_queue
@@ -20,9 +18,6 @@ def worker(test_queue, done_queue, subproc_queue, worker_id):
     off of the test_queue, runs it, then puts the Test object
     on the done_queue.
     """
-    # need a unique profile output file for each worker process
-    testflo.profile._prof_file = 'profile_%s.out' % worker_id
-
     test_count = 0
     for test in iter(test_queue.get, 'STOP'):
 
@@ -38,7 +33,6 @@ def worker(test_queue, done_queue, subproc_queue, worker_id):
     # don't save anything unless we actually ran a test
     if test_count > 0:
         save_coverage()
-        save_profile()
 
 
 class TestRunner(object):

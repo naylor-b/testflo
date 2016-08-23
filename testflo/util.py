@@ -34,10 +34,10 @@ def _get_parser():
     parser = ArgumentParser()
     parser.usage = "testflo [options]"
     parser.add_argument('-c', '--config', action='store', dest='cfg',
-                        metavar='CONFIG',
+                        metavar='FILE',
                         help='Path of config file where preferences are specified.')
     parser.add_argument('-t', '--testfile', action='store', dest='testfile',
-                        metavar='TESTFILE',
+                        metavar='FILE',
                         help='Path to a file containing one testspec per line.')
     parser.add_argument('--maxtime', action='store', dest='maxtime',
                         metavar='TIME_LIMIT', default=-1, type=float,
@@ -56,7 +56,7 @@ def _get_parser():
                              'use the number of CPUs available.  To force serial'
                              ' execution, specify a value of 1.')
     parser.add_argument('-o', '--outfile', action='store', dest='outfile',
-                        metavar='OUTFILE', default='test_report.out',
+                        metavar='FILE', default='test_report.out',
                         help='Name of test report file.  Default is test_report.out.')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help="Include testspec and elapsed time in "
@@ -66,9 +66,9 @@ def _get_parser():
                           "which tests would have been run.")
     parser.add_argument('--pre_announce', action='store_true', dest='pre_announce',
                         help="Announce the name of each test before it runs. This "
-                             "can help track down a hanging test.")
+                             "can help track down a hanging test. This automatically sets -n 1.")
     parser.add_argument('-f', '--fail', action='store_true', dest='save_fails',
-                        help="Save specs of failed tests to failtests.in file.")
+                        help="Save failed tests to failtests.in file.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess.")
     parser.add_argument('--nompi', action='store_true', dest='nompi',
@@ -85,24 +85,20 @@ def _get_parser():
     parser.add_argument('--coverage-html', action='store_true', dest='coveragehtml',
                         help="Perform coverage analysis and display results in browser")
     parser.add_argument('--coverpkg', action='append', dest='coverpkgs',
-                        metavar='COVERPKG',
+                        metavar='PKG',
                         help="Add the given package to the coverage list. You"
                               " can use this option multiple times to cover"
                               " multiple packages.")
     parser.add_argument('--cover-omit', action='append', dest='cover_omits',
-                        metavar='COVEROMIT',
+                        metavar='FILE',
                         help="Add a file name pattern to remove it from coverage.")
-    parser.add_argument('--profile', action='store_true', dest='profile',
-                        help="Perform profiling.")
-    parser.add_argument('--profile_port', action='store', dest='prof_port',
-                        default=4242, type=int,
-                        help='Port used for profile viewer server.')
 
     parser.add_argument('-b', '--benchmark', action='store_true', dest='benchmark',
                         help='Specifies that benchmarks are to be run rather '
-                             'than tests.')
+                             'than tests, so only files starting with "benchmark_" '
+                             'will be executed.')
     parser.add_argument('-d', '--datafile', action='store', dest='benchmarkfile',
-                        metavar='DATAFILE', default='benchmark_data.csv',
+                        metavar='FILE', default='benchmark_data.csv',
                         help='Name of benchmark data file.  Default is benchmark_data.csv.')
 
     parser.add_argument('--noreport', action='store_true', dest='noreport',
@@ -119,7 +115,6 @@ def _get_testflo_subproc_args():
     cmdset = set([
       '--nocapture',
       '-s',
-      '--profile',
       '--coverpkg',
       '--coverage',
       '--coverage-html',
