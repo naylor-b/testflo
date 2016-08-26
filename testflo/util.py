@@ -310,6 +310,7 @@ def get_module(fname):
         pdirs = parent_dirs(fname)
         oldpath = sys.path[:]
         sys.path.extend(pdirs)
+        sys.path.append(os.getcwd())
         try:
             __import__(modpath)
             mod = sys.modules[modpath]
