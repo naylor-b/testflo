@@ -46,7 +46,19 @@ For a full list of testflo options, execute the following:
 `testflo -h`
 
 
-The following is an example of what an MPI unit test looks like.  To tell testflo that a TestCase is an MPI TestCase, you just add a class attribute called N_PROCS to it and set it to the number of MPI processes to use for the test.  That's all there is to it. Of course, depending on what sort of MPI code you're testing, it's up to you to potentially test for different things on different ranks.
+NOTE: Because testflo runs tests concurrently by default, your tests must be
+written with concurrency in mind or they may fail.  For example, if multiple
+tests write output to a file with the same name, you have to make sure that those
+tests are executed in different directories to prevent that file from being
+corrupted.  If your tests are not written to run concurrently, you can always
+just run them with `testflo -n 1` and run them in serial instead.
+
+The following is an example of what an MPI unit test looks like.  To tell
+testflo that a TestCase is an MPI TestCase, you just add a class attribute
+called N_PROCS to it and set it to the number of MPI processes to use for the
+test.  That's all there is to it. Of course, depending on what sort of MPI code
+you're testing, it's up to you to potentially test for different things on
+different ranks.
 
 
 ```python
@@ -58,7 +70,7 @@ class MyMPI_TestCase(TestCase):
     def test_foo(self):
 
         # do your MPI testing here, e.g.,
-        
+
         if self.comm.rank == 0:
             # some test only valid on rank 0...
 
@@ -72,7 +84,10 @@ Here's an example of testflo output for openmdao.core:
 ```
 
 openmdao$ testflo openmdao.core
-..................................................................................................................................................................................................................................................................
+............................................................................
+............................................................................
+............................................................................
+..............................
 
 OK
 
@@ -88,7 +103,9 @@ Speedup: 3.347731
 
 ```
 
-Running testflo in verbose mode on openmdao.core.test.test_problem is shown below. The verbose output contains the full test name as well as the elapsed time and memory usage.
+Running testflo in verbose mode on openmdao.core.test.test_problem is shown
+below. The verbose output contains the full test name as well as the elapsed
+time and memory usage.
 
 
 ```
@@ -162,4 +179,3 @@ or install from PYPI using:
 
 If you try it out and find any problems, submit them as issues on github at
 https://github.com/OpenMDAO/testflo.
-

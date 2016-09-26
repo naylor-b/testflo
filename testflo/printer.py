@@ -7,9 +7,12 @@ from testflo.options import get_options
 options = get_options()
 
 _result_map = {
-    'FAIL': 'F',
-    'SKIP': 'S',
-    'OK': '.',
+    ('FAIL', False): 'F',
+    ('FAIL', True): 'X',  # expected failure
+    ('SKIP', False): 'S',
+    ('SKIP', True): 'S',
+    ('OK', False): '.',
+    ('OK', True): 'U',  # unexpected success
 }
 
 class ResultPrinter(object):
@@ -40,7 +43,14 @@ class ResultPrinter(object):
         else:
             run_type = ''
 
-        if self.verbose or (result.err_msg and result.status in ('SKIP', 'FAIL')):
+        if result.status == 'SKIP' or (
+            (result.expected_fail and result.status != 'FAIL') or
+            (not result.expected_fail and result.status == 'FAIL')):
+            show_msg = True
+        else:
+            show_msg = False
+
+        if self.verbose or (result.err_msg and show_msg):
             if result.err_msg:
                 stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
                                                      run_type,
@@ -55,6 +65,6 @@ class ResultPrinter(object):
                                                     result.status,
                                                     stats, result.memory_usage))
         else:
-            stream.write(_result_map[result.status])
+            stream.write(_result_map[(result.status, result.expected_fail)])
 
         stream.flush()

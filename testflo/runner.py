@@ -47,8 +47,10 @@ class TestRunner(object):
         for test in input_iter:
             result = test.run(self._queue)
             yield result
-            if self.stop and result.status == 'FAIL':
-                break
+            if self.stop:
+                if (result.status == 'FAIL' and not result.expected_fail) or (
+                              result.status == 'OK' and result.expected_fail):
+                      break
 
         save_coverage()
 
@@ -100,8 +102,10 @@ class ConcurrentTestRunner(TestRunner):
                     result = self.done_queue.get()
                     yield result
                     numtests -= 1
-                    if self.stop and result.status == 'FAIL':
-                        break
+                    if self.stop:
+                        if (result.status == 'FAIL' and not result.expected_fail) or (
+                              result.status == 'OK' and result.expected_fail):
+                            break
                     self.task_queue.put(advance_iterator(it))
                     numtests += 1
             except StopIteration:

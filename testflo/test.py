@@ -4,6 +4,7 @@ import time
 import traceback
 import inspect
 import unittest
+from unittest.case import _ExpectedFailure, _UnexpectedSuccess
 import pickle
 from subprocess import Popen, PIPE
 
@@ -69,6 +70,7 @@ class Test(object):
         self.nocapture = options.nocapture
         self.isolated = options.isolated
         self.mpi = not options.nompi
+        self.expected_fail = False
 
         if not err_msg:
             _, _, self.nprocs = self._get_test_parent()
@@ -205,6 +207,7 @@ class Test(object):
 
         run_method = True
         run_td = True
+        expected = expected2 = expected3 = False
 
         try:
             old_err = sys.stderr
@@ -216,18 +219,24 @@ class Test(object):
 
             self.start_time = time.time()
 
+            # handle @unittest.skip class decorator
+            if hasattr(parent, '__unittest_skip__') and parent.__unittest_skip__:
+                sys.stderr.write("%s\n" % parent.__unittest_skip_why__)
+                status = 'SKIP'
+                setup = run_method = run_td = False
+
             # if there's a setUp method, run it
             if setup:
-                status = _try_call(setup)
+                status, expected = _try_call(setup)
                 if status != 'OK':
                     run_method = False
                     run_td = False
 
             if run_method:
-                status = _try_call(getattr(parent, method))
+                status, expected2 = _try_call(getattr(parent, method))
 
             if teardown and run_td:
-                tdstatus = _try_call(teardown)
+                tdstatus, expected3 = _try_call(teardown)
                 if status == 'OK':
                     status = tdstatus
 
@@ -235,6 +244,7 @@ class Test(object):
             self.status = status
             self.err_msg = errstream.getvalue()
             self.memory_usage = get_memory_usage()
+            self.expected_fail = expected or expected2 or expected3
 
             if sys.platform == 'win32':
                 self.load1m, self.load5m, self.load15m = (0.0, 0.0, 0.0)
@@ -320,13 +330,20 @@ def _try_call(method):
     and returns the status (OK, SKIP, FAIL).
     """
     status = 'OK'
+    expected = False
     try:
         method()
     except unittest.SkipTest as e:
         status = 'SKIP'
         sys.stderr.write(str(e))
+    except _ExpectedFailure:
+        status = 'FAIL'
+        expected = True
+    except _UnexpectedSuccess:
+        status = 'OK'
+        expected = True
     except:
         status = 'FAIL'
         sys.stderr.write(traceback.format_exc())
 
-    return status
+    return status, expected
