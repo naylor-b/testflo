@@ -53,6 +53,14 @@ tests are executed in different directories to prevent that file from being
 corrupted.  If your tests are not written to run concurrently, you can always
 just run them with `testflo -n 1` and run them in serial instead.
 
+Beginning with version 1.1, testflo now supports setup/teardown at both the
+module level (using setUpModule and tearDownModule), and the TestCase class
+level (using setUpClass and tearDownClass).  It has always supported
+setup/teardown at the TestCase instance level.  Note that module and
+TestCase class level setup/teardown are NOT currently supported for MPI tests.
+Support for expected failures and unittest.skip class decorators was also
+added in version 1.1.
+
 The following is an example of what an MPI unit test looks like.  To tell
 testflo that a TestCase is an MPI TestCase, you just add a class attribute
 called N_PROCS to it and set it to the number of MPI processes to use for the
