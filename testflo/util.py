@@ -307,9 +307,8 @@ def get_module(fname):
         # environment as testflo, so try temporarily prepending
         # its parent dirs to sys.path so it'll (hopefully) be
         # importable
-        pdirs = parent_dirs(fname)
         oldpath = sys.path[:]
-        sys.path.extend(pdirs)
+        sys.path.extend(parent_dirs(fname))
         sys.path.append(os.getcwd())
         try:
             __import__(modpath)

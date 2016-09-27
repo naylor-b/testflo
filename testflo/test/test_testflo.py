@@ -1,4 +1,6 @@
 
+import os
+
 import unittest
 
 class TestfloTestCase(unittest.TestCase):
@@ -13,11 +15,41 @@ class TestfloTestCase(unittest.TestCase):
         self.fail("I expected this")
 
     @unittest.expectedFailure
-    def test_expected_fail_bad(self):
+    def test_unexpected_success(self):
         pass
 
     @unittest.skip("skipping 1")
     def test_skip(self):
+        pass
+
+class TestfloTestCaseWFixture(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.pid = os.getpid()
+        print("setting up %s, pid=%d" % (cls.__name__, cls.pid))
+
+    @classmethod
+    def tearDownClass(cls):
+        assert os.getpid() == cls.pid
+        print("tearing down %s, pid=%d" % (cls.__name__, cls.pid))
+
+    def test_tcase_grouped_ok(self):
+        assert os.getpid() == self.pid
+
+    def test_tcase_grouped_fail(self):
+        self.fail("just a typical failure")
+
+    @unittest.expectedFailure
+    def test_tcase_grouped_expected_fail(self):
+        self.fail("I expected this")
+
+    @unittest.expectedFailure
+    def test_tcase_grouped_unexpected_success(self):
+        pass
+
+    @unittest.skip("skipping 2")
+    def test_tcase_grouped_skip(self):
         pass
 
 

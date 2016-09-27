@@ -10,6 +10,15 @@ from os.path import basename, dirname, isdir
 from testflo.util import find_files, get_module, ismethod
 from testflo.test import Test
 
+def _has_class_fixture(tcase):
+    if tcase is not None:
+        for klass in tcase.__mro__:
+            if klass is unittest.TestCase:
+                break
+            if 'setUpClass' in klass.__dict__ or 'tearDownClass' in klass.__dict__:
+                return  True
+    return False
+
 
 class TestDiscoverer(object):
 
@@ -20,21 +29,76 @@ class TestDiscoverer(object):
         self.func_pattern = func_pattern
         self.dir_exclude = dir_exclude
 
+        # to support module and class fixtures, we need to be able to
+        # process all tests in a module or TestCase in the same process,
+        # so these are to keep track of which tests need to be grouped
+        # together.
+        self._mod_fixture_groups = {}
+        self._tcase_fixture_groups = {}
+
     def get_iter(self, input_iter):
         """Returns an iterator of Test objects
         based on the starting list of directories/modules/testspecs.
         """
         seen = set()
-        for test in input_iter:
-            if isdir(test):
+        for tests in input_iter:
+            if isdir(tests):
                 itr = self._dir_iter
             else:
                 itr = self._testspec_iter
 
-            for result in itr(test):
+            for result in itr(tests):
                 if result.spec not in seen:
                     seen.add(result.spec)
-                    yield result
+                    result = self._filter(result)
+                    if result is not None:
+                        yield result
+
+        new_tcase_groups = []
+        for tcase, tests in self._tcase_fixture_groups.items():
+            # mark the first and last tests so that we know when to
+            # run setUpClass and tearDownClass
+            tests[0]._tcase_fixture_first = True
+            tests[-1]._tcase_fixture_last = True
+
+            # check to see if this TestCase is part of a module with setUpModule/tearDownModule
+            if tests[0].mod in self._mod_fixture_groups:
+                modgroup = self._mod_fixture_groups[tests[0].mod]
+                modgroup.extend(tests)
+            else:
+                new_tcase_groups.append(tests)
+
+        # yield any tests that are grouped because of a module level fixture.
+        for tests in self._mod_fixture_groups.values():
+            # mark the first and last tests so that we know when to
+            # run setUpModule and tearDownModule
+            tests[0]._mod_fixture_first = True
+            tests[-1]._mod_fixture_last = True
+            yield tests  # yield them together as a group
+
+        # yield grouped tests for all remaining TestCases with setUpClass/tearDownClass
+        for tests in new_tcase_groups:
+            yield tests
+
+    def _filter(self, test):
+        """
+        If the given test is part of a module with setUpModule/tearDownModule
+        and/or part of a TestCase with setUpClass/tearDownClass, then save it
+        for later, else return it.
+        """
+
+        if test.mod in self._mod_fixture_groups:
+            self._mod_fixture_groups[test.mod].append(test)
+        elif hasattr(test.mod, 'setUpModule') or hasattr(test.mod, 'tearDownModule'):
+            self._mod_fixture_groups[test.mod] = [test]
+
+        if test.tcase in self._tcase_fixture_groups:
+            self._tcase_fixture_groups[test.tcase].append(test)
+        elif _has_class_fixture(test.tcase):
+            self._tcase_fixture_groups[test.tcase] = [test]
+
+        if not (test.mod in self._mod_fixture_groups or test.tcase in self._tcase_fixture_groups):
+            return test
 
     def _dir_iter(self, dname):
         """Iterate over all tests in modules found in the given
