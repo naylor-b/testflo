@@ -3,42 +3,37 @@ import os
 
 import unittest
 
-class TestfloTestCase(unittest.TestCase):
-    def test_ok(self):
-        pass
+modpid = None
 
-    def test_fail(self):
-        self.fail("failure 1")
+def setUpModule():
+    global modpid
+    modpid = os.getpid()
+    print("\ncalled setUpModule from pid %d\n" % modpid)
 
-    @unittest.expectedFailure
-    def test_expected_fail_good(self):
-        self.fail("I expected this")
+def tearDownModule():
+    global modpid
+    mypid = os.getpid()
+    assert mypid == modpid
+    print("\ncalled tearDownModule from pid %d\n" % mypid)
 
-    @unittest.expectedFailure
-    def test_unexpected_success(self):
-        pass
 
-    @unittest.skip("skipping 1")
-    def test_skip(self):
-        pass
-
-class TestfloTestCaseWFixture(unittest.TestCase):
+class TestfloTestCaseWFixture2(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.pid = os.getpid()
-        print("setting up %s, pid=%d" % (cls.__name__, cls.pid))
+        print("\nsetting up %s, pid=%d\n" % (cls.__name__, cls.pid))
 
     @classmethod
     def tearDownClass(cls):
         assert os.getpid() == cls.pid
-        print("tearing down %s, pid=%d" % (cls.__name__, cls.pid))
+        print("\ntearing down %s, pid=%d\n" % (cls.__name__, cls.pid))
 
     def test_tcase_grouped_ok(self):
         assert os.getpid() == self.pid
 
     def test_tcase_grouped_fail(self):
-        self.fail("failure 2")
+        self.fail("failure 3")
 
     @unittest.expectedFailure
     def test_tcase_grouped_expected_fail(self):
@@ -54,7 +49,7 @@ class TestfloTestCaseWFixture(unittest.TestCase):
 
 
 @unittest.skip("skipping a whole testcase...")
-class SkippedTestCase(unittest.TestCase):
+class SkippedTestCase2(unittest.TestCase):
     def test_1(self):
         pass
 

@@ -160,7 +160,7 @@ skip_dirs=site-packages,
             if options.benchmark:
                 pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
 
-            if options.short:
+            if options.compact:
                 verbose = -1
             else:
                 verbose = int(options.verbose)

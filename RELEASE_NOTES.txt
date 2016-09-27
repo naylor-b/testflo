@@ -6,7 +6,5 @@ Features:
 * supports setUpClass/tearDownClass
 * supports expected failures
 * supports unittest.skip class decorator
-* added --short option to print only single character test results without
+* added --compact option to print only single character test results without
   showing error or skip messages
-
-

@@ -61,7 +61,7 @@ def _get_parser():
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help="Include testspec and elapsed time in "
                              "screen output. Also shows all stderr output, even if test doesn't fail")
-    parser.add_argument('--short', action='store_true', dest='short',
+    parser.add_argument('--compact', action='store_true', dest='compact',
                         help="Limit output to a single character for each test.")
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "

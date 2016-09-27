@@ -2,15 +2,19 @@ import os
 import sys
 import time
 import traceback
-import inspect
-import unittest
-from unittest.case import _ExpectedFailure, _UnexpectedSuccess
+from inspect import isclass
 import pickle
 from subprocess import Popen, PIPE
 
 from types import FunctionType, ModuleType
 from six.moves import cStringIO
-from six import PY3
+from six import PY2, PY3
+
+from unittest import TestCase, SkipTest
+if PY2:
+    from unittest.case import _ExpectedFailure, _UnexpectedSuccess
+else:
+    from unittest.case import _UnexpectedSuccess
 
 from testflo.cover import start_coverage, stop_coverage
 
@@ -388,7 +392,7 @@ def _parse_test_path(testspec):
     if rest:
         objname, _, funcname = rest.partition('.')
         obj = getattr(mod, objname)
-        if inspect.isclass(obj) and issubclass(obj, unittest.TestCase):
+        if isclass(obj) and issubclass(obj, TestCase):
             testcase = obj
             if funcname:
                 meth = getattr(obj, funcname)
@@ -402,24 +406,26 @@ def _parse_test_path(testspec):
 
     return (mod, testcase, funcname)
 
-def _try_call(method):
+def _try_call(func):
     """Calls the given method, captures stdout and stderr,
     and returns the status (OK, SKIP, FAIL).
     """
     status = 'OK'
-    expected = False
+    if PY3 and getattr(func, '__unittest_expecting_failure__', False):
+        expected = True
+    else:
+        expected = False
     try:
-        method()
-    except unittest.SkipTest as e:
+        func()
+    except SkipTest as e:
         status = 'SKIP'
         sys.stderr.write(str(e))
-    except _ExpectedFailure:
-        status = 'FAIL'
-        expected = True
     except _UnexpectedSuccess:
         status = 'OK'
         expected = True
-    except:
+    except Exception as err:
+        if PY2 and isinstance(err, _ExpectedFailure):
+            expected = True
         status = 'FAIL'
         sys.stderr.write(traceback.format_exc())
 
