@@ -22,7 +22,7 @@ class ResultPrinter(object):
     still displayed in verbose form.
     """
 
-    def __init__(self, stream=sys.stdout, verbose=False):
+    def __init__(self, stream=sys.stdout, verbose=0):
         self.stream = stream
         self.verbose = verbose
 
@@ -36,21 +36,20 @@ class ResultPrinter(object):
 
         stats = elapsed_str(result.elapsed())
 
-        if result.mpi and result.nprocs > 0:
-            run_type = '(mpi) '
-        elif result.isolated:
-            run_type = '(isolated) '
-        else:
-            run_type = ''
-
-        if result.status == 'SKIP' or (
-            (result.expected_fail and result.status != 'FAIL') or
+        if ((result.expected_fail and result.status != 'FAIL') or
             (not result.expected_fail and result.status == 'FAIL')):
             show_msg = True
         else:
             show_msg = False
 
-        if self.verbose or (result.err_msg and show_msg):
+        if (self.verbose == 0 and (result.err_msg and show_msg)) or self.verbose > 0:
+            if result.mpi and result.nprocs > 0:
+                run_type = '(mpi) '
+            elif result.isolated:
+                run_type = '(isolated) '
+            else:
+                run_type = ''
+
             if result.err_msg:
                 stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
                                                      run_type,

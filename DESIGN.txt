@@ -22,14 +22,22 @@ python file containing the test(s) or the python module path, e.g.,
 
 The general test specifiers are iterated over by the TestDiscoverer, who
 generates an output iterator of Test objects. There is a Test object for each
-individual test.
+individual test.  As of version 1.1, the objects in the TestDiscoverer's
+output iterator can be either individual Test objects or lists of Test
+objects. This change was necessary to support module level and TestCase
+class level setup and teardown functions.  The thought was that all tests
+under either a module level setup/teardown or a TestCase class level
+setup/teardown should be grouped and executed in the same process, so
+when these functions are present, the Test objects are grouped into a list
+and sent together to the ConcurrentTestRunner.  After execution, the rest
+of the pipeline sees only individual Test objects.
 
-An iterator of those is passed on to the TestRunner.  The TestRunner
-executes the test and passes an iterator of those to the ResultPrinter,
+The ConcurrentTestRunner
+executes each test and passes an iterator of those to the ResultPrinter,
 who then passes them on to the ResultSummary.
 
-The multiprocessing library is used in the TestRunner to support concurrent
+The multiprocessing library is used in the ConcurrentTestRunner to support concurrent
 execution of tests.  It adds Test objects to a shared Queue that the
 worker processes pull from. Then the workers place the finished Test objects in
-a 'done' Queue that the TestRunner pulls from and passes downstream for
+a 'done' Queue that the ConcurrentTestRunner pulls from and passes downstream for
 display, summary, or whatever.

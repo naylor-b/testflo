@@ -160,14 +160,19 @@ skip_dirs=site-packages,
             if options.benchmark:
                 pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
 
+            if options.short:
+                verbose = -1
+            else:
+                verbose = int(options.verbose)
+
             pipeline.extend([
-                ResultPrinter(verbose=options.verbose).get_iter,
+                ResultPrinter(verbose=verbose).get_iter,
                 ResultSummary(options).get_iter,
             ])
             if not options.noreport:
                 # print verbose results and summary to a report file
                 pipeline.extend([
-                    ResultPrinter(report, verbose=True).get_iter,
+                    ResultPrinter(report, verbose=1).get_iter,
                     ResultSummary(options, stream=report).get_iter,
                 ])
 

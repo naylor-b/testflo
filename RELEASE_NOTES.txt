@@ -1,0 +1,12 @@
+testflo version 1.1 Release Notes
+September 27, 2016
+
+Features:
+* supports setUpModule/tearDownModule
+* supports setUpClass/tearDownClass
+* supports expected failures
+* supports unittest.skip class decorator
+* added --short option to print only single character test results without
+  showing error or skip messages
+
+
