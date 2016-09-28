@@ -19,16 +19,20 @@ def worker(test_queue, done_queue, subproc_queue, worker_id):
     on the done_queue.
     """
     test_count = 0
-    for test in iter(test_queue.get, 'STOP'):
+    for tests in iter(test_queue.get, 'STOP'):
 
-        try:
-            test_count += 1
-            done_queue.put(test.run(subproc_queue))
-        except:
-            # we generally shouldn't get here, but just in case,
-            # handle it so that the main process doesn't hang at the
-            # end when it tries to join all of the concurrent processes.
-            done_queue.put(test)
+        done_tests = []
+        for test in tests:
+            try:
+                test_count += 1
+                done_tests.append(test.run(subproc_queue))
+            except:
+                # we generally shouldn't get here, but just in case,
+                # handle it so that the main process doesn't hang at the
+                # end when it tries to join all of the concurrent processes.
+                done_tests.append(test)
+
+        done_queue.put(done_tests)
 
     # don't save anything unless we actually ran a test
     if test_count > 0:
@@ -39,15 +43,25 @@ class TestRunner(object):
 
     def __init__(self, options, subproc_queue):
         self.stop = options.stop
+        self.pre_announce = options.pre_announce
         self._queue = subproc_queue
 
     def get_iter(self, input_iter):
         """Run tests serially."""
 
-        for test in input_iter:
-            result = test.run(self._queue)
-            yield result
-            if self.stop and result.status == 'FAIL':
+        for tests in input_iter:
+            stop = False
+            for test in tests:
+                if self.pre_announce:
+                    print("    about to run %s" % test.short_name())
+                result = test.run(self._queue)
+                yield result
+                if self.stop:
+                    if (result.status == 'FAIL' and not result.expected_fail) or (
+                                  result.status == 'OK' and result.expected_fail):
+                          stop = True
+                          break
+            if stop:
                 break
 
         save_coverage()
@@ -97,11 +111,18 @@ class ConcurrentTestRunner(TestRunner):
         else:
             try:
                 while numtests:
-                    result = self.done_queue.get()
-                    yield result
-                    numtests -= 1
-                    if self.stop and result.status == 'FAIL':
+                    stop = False
+                    results = self.done_queue.get()
+                    for result in results:
+                        yield result
+                        if self.stop:
+                            if (result.status == 'FAIL' and not result.expected_fail) or (
+                                  result.status == 'OK' and result.expected_fail):
+                                stop = True
+                                break
+                    if stop:
                         break
+                    numtests -= 1
                     self.task_queue.put(advance_iterator(it))
                     numtests += 1
             except StopIteration:
@@ -111,7 +132,9 @@ class ConcurrentTestRunner(TestRunner):
             self.task_queue.put('STOP')
 
         for i in range(numtests):
-            yield self.done_queue.get()
+            results = self.done_queue.get()
+            for result in results:
+                yield result
 
         for proc in self.procs:
             proc.join()

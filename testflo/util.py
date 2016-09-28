@@ -56,11 +56,13 @@ def _get_parser():
                              'use the number of CPUs available.  To force serial'
                              ' execution, specify a value of 1.')
     parser.add_argument('-o', '--outfile', action='store', dest='outfile',
-                        metavar='FILE', default='test_report.out',
-                        help='Name of test report file.  Default is test_report.out.')
+                        metavar='FILE', default='testflo_report.out',
+                        help='Name of test report file.  Default is testflo_report.out.')
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
                         help="Include testspec and elapsed time in "
                              "screen output. Also shows all stderr output, even if test doesn't fail")
+    parser.add_argument('--compact', action='store_true', dest='compact',
+                        help="Limit output to a single character for each test.")
     parser.add_argument('--dryrun', action='store_true', dest='dryrun',
                         help="Don't actually run tests, but print "
                           "which tests would have been run.")
@@ -307,9 +309,9 @@ def get_module(fname):
         # environment as testflo, so try temporarily prepending
         # its parent dirs to sys.path so it'll (hopefully) be
         # importable
-        pdirs = parent_dirs(fname)
         oldpath = sys.path[:]
-        sys.path.extend(pdirs)
+        sys.path.extend(parent_dirs(fname))
+        sys.path.append(os.getcwd())
         try:
             __import__(modpath)
             mod = sys.modules[modpath]
