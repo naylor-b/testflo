@@ -25,13 +25,20 @@ class ResultSummary(object):
             total += 1
 
             if test.status == 'OK':
-                oks += 1
+                if test.expected_fail:
+                    fails.append(test.short_name())
+                else:
+                    oks += 1
                 test_sum_time += (test.end_time-test.start_time)
             elif test.status == 'FAIL':
-                fails.append(test.short_name())
+                if test.expected_fail:
+                    oks += 1
+                else:
+                    fails.append(test.short_name())
                 test_sum_time += (test.end_time-test.start_time)
             elif test.status == 'SKIP':
                 skips.append(test.short_name())
+
             yield test
 
         # now summarize the run

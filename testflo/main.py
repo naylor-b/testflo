@@ -55,20 +55,12 @@ def dryrun(input_iter):
     a dry run, listing all of the discovered tests but not
     actually running them.
     """
-    for test in input_iter:
-        if test.status is None:
-            test.status = 'OK'
-        print(test)
-        yield test
-
-def pre_announce(input_iter):
-    """Add this to the pipline when you want to know the name of
-    each test before it runs.  This can be useful in identifying
-    a test that hangs.
-    """
-    for test in input_iter:
-        print("    about to run %s" % test.short_name())
-        yield test
+    for tests in input_iter:
+        for test in tests:
+            if test.status is None:
+                test.status = 'OK'
+            print(test)
+            yield test
 
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
@@ -160,7 +152,6 @@ skip_dirs=site-packages,
         else:
             if options.pre_announce:
                 options.num_procs = 1
-                pipeline.append(pre_announce)
 
             runner = ConcurrentTestRunner(options, queue)
 
@@ -169,14 +160,19 @@ skip_dirs=site-packages,
             if options.benchmark:
                 pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
 
+            if options.compact:
+                verbose = -1
+            else:
+                verbose = int(options.verbose)
+
             pipeline.extend([
-                ResultPrinter(verbose=options.verbose).get_iter,
+                ResultPrinter(verbose=verbose).get_iter,
                 ResultSummary(options).get_iter,
             ])
             if not options.noreport:
                 # print verbose results and summary to a report file
                 pipeline.extend([
-                    ResultPrinter(report, verbose=True).get_iter,
+                    ResultPrinter(report, verbose=1).get_iter,
                     ResultSummary(options, stream=report).get_iter,
                 ])
 
