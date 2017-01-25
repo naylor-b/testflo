@@ -66,8 +66,5 @@ class ResultSummary(object):
             procstr = " in isolated processes"
         else:
             procstr = " using %d processes" % self.options.num_procs
-        write("\n\nRan %d test%s%s\nSum of test times: %s\n"
-              "Wall clock time:   %s\nSpeedup: %f\n\n" %
-                      (total, s, procstr,
-                       elapsed_str(test_sum_time), elapsed_str(wallclock),
-                       test_sum_time/wallclock))
+        write("\n\nRan %d test%s%s\nWall clock time:   %s\n\n" %
+                      (total, s, procstr, elapsed_str(wallclock)))
