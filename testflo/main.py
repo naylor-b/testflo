@@ -131,7 +131,8 @@ skip_dirs=site-packages,
                                     dir_exclude=dir_exclude)
         benchmark_file = open(options.benchmarkfile, 'a')
     else:
-        discoverer = TestDiscoverer(dir_exclude=dir_exclude)
+        discoverer = TestDiscoverer(dir_exclude=dir_exclude,
+                                    func_pattern=six.text_type(options.test_glob))
         benchmark_file = open(os.devnull, 'a')
 
     retval = 0
