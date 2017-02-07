@@ -124,6 +124,9 @@ skip_dirs=site-packages,
     else:
         report_file = open(options.outfile, 'w')
 
+    if not options.test_glob:
+        options.test_glob = ['test*']
+
     if options.benchmark:
         options.num_procs = 1
         options.isolated = True
