@@ -16,9 +16,6 @@ try:
 except ImportError:
     pass
 
-from multiprocessing.connection import arbitrary_address
-import socket
-
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile,  abspath, split, splitext
 
@@ -351,6 +348,9 @@ def read_config_file(cfgfile, options):
 
     if config.has_option('testflo', 'num_procs'):
         options.num_procs = int(config.get('testflo', 'num_procs'))
+
+    if config.has_option('testflo', 'noreport'):
+        options.noreport = bool(config.get('testflo', 'noreport'))
 
 
 def get_memory_usage():

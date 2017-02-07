@@ -28,21 +28,17 @@ import os
 import sys
 import six
 import time
-import traceback
-import subprocess
-import multiprocessing
 
 from fnmatch import fnmatch
 
-from testflo.runner import ConcurrentTestRunner, TestRunner
-from testflo.test import Test
+from testflo.runner import ConcurrentTestRunner
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
 from testflo.summary import ResultSummary
 from testflo.discover import TestDiscoverer
 from testflo.filters import TimeFilter, FailFilter
 
-from testflo.util import read_config_file, read_test_file, _get_parser
+from testflo.util import read_config_file, read_test_file
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.options import get_options
 from testflo.qman import get_server_queue
@@ -123,6 +119,11 @@ skip_dirs=site-packages,
 
     setup_coverage(options)
 
+    if options.noreport:
+        report_file = open(os.devnull, 'a')
+    else:
+        report_file = open(options.outfile, 'w')
+
     if options.benchmark:
         options.num_procs = 1
         options.isolated = True
@@ -143,7 +144,7 @@ skip_dirs=site-packages,
     else:
         manager, queue = (None, None)
 
-    with open(options.outfile, 'w') as report, benchmark_file as bdata:
+    with report_file as report, benchmark_file as bdata:
         pipeline = [
             discoverer.get_iter,
         ]
