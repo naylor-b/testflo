@@ -29,7 +29,7 @@ import sys
 import six
 import time
 
-from fnmatch import fnmatch
+from fnmatch import fnmatch, fnmatchcase
 
 from testflo.runner import ConcurrentTestRunner
 from testflo.printer import ResultPrinter
@@ -127,16 +127,22 @@ skip_dirs=site-packages,
     if not options.test_glob:
         options.test_glob = ['test*']
 
+    def func_matcher(funcname):
+        for pattern in options.test_glob:
+            if fnmatchcase(funcname, pattern):
+                return True
+        return False
+
     if options.benchmark:
         options.num_procs = 1
         options.isolated = True
         discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
-                                    func_pattern=six.text_type('benchmark*'),
+                                    func_match=lambda f: fnmatchcase(f, 'benchmark*'),
                                     dir_exclude=dir_exclude)
         benchmark_file = open(options.benchmarkfile, 'a')
     else:
         discoverer = TestDiscoverer(dir_exclude=dir_exclude,
-                                    func_pattern=six.text_type(options.test_glob))
+                                    func_match=func_matcher)
         benchmark_file = open(os.devnull, 'a')
 
     retval = 0
