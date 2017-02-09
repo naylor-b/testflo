@@ -107,7 +107,8 @@ def _get_parser():
                         help='A test method, test case, module, or directory to run.')
 
     parser.add_argument('-m', '--match', '--testmatch', action='append', dest='test_glob',
-                        metavar='GLOB', help='Pattern to use for test discovery.',
+                        metavar='GLOB',
+                        help='Pattern to use for test discovery. Multiple patterns are allowed.',
                         default=[])
 
     return parser
