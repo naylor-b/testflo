@@ -4,7 +4,6 @@ from inspect import getmembers, isclass, isfunction
 from unittest import TestCase
 import six
 
-from fnmatch import fnmatchcase
 from os.path import basename, dirname, isdir
 
 from testflo.util import find_files, get_module, ismethod
@@ -23,10 +22,10 @@ def _has_class_fixture(tcase):
 class TestDiscoverer(object):
 
     def __init__(self, module_pattern=six.text_type('test*.py'),
-                       func_pattern=six.text_type('test*'),
+                       func_match=lambda f: fnmatchcase(f, 'test*'),
                        dir_exclude=None):
         self.module_pattern = module_pattern
-        self.func_pattern = func_pattern
+        self.func_match = func_match
         self.dir_exclude = dir_exclude
 
         # to support module and class fixtures, we need to be able to
@@ -140,7 +139,7 @@ class TestDiscoverer(object):
                         for result in self._testcase_iter(filename, obj):
                             yield result
 
-                    elif isfunction(obj) and fnmatchcase(name, self.func_pattern):
+                    elif isfunction(obj) and self.func_match(name):
                         yield Test(':'.join((filename, obj.__name__)))
 
     def _testcase_iter(self, fname, testcase):
@@ -148,9 +147,8 @@ class TestDiscoverer(object):
         TestCase class.
         """
         tcname = ':'.join((fname, testcase.__name__))
-        pat = self.func_pattern
         for name, method in getmembers(testcase, ismethod):
-            if fnmatchcase(name, pat):
+            if self.func_match(name):
                 yield Test('.'.join((tcname, method.__name__)))
 
     def _testspec_iter(self, testspec):
