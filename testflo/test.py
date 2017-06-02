@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import sys
 import time
@@ -166,8 +168,8 @@ class Test(object):
                   universal_newlines=True)  # text mode
         out, err = p.communicate()
         if self.nocapture:
-            sys.stdout.write(out)
-            sys.stderr.write(err)
+            if out: print(out)
+            if err: print(err)
 
         os.environ['TESTFLO_QUEUE'] = ''
 
@@ -197,8 +199,8 @@ class Test(object):
                       universal_newlines=True)  # text mode
             out, err = p.communicate()
             if self.nocapture:
-                sys.stdout.write(out)
-                sys.stderr.write(err)
+                if out: print(out)
+                if err: print(err)
 
             os.environ['TESTFLO_QUEUE'] = ''
 
