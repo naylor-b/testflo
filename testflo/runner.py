@@ -54,6 +54,7 @@ class TestRunner(object):
             for test in tests:
                 if self.pre_announce:
                     print("    about to run %s" % test.short_name())
+                    sys.stdout.flush()
                 result = test.run(self._queue)
                 yield result
                 if self.stop:
