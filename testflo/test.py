@@ -231,18 +231,16 @@ class Test(object):
                os.path.join(os.path.dirname(__file__), 'isolatedrun.py'),
                self.spec]
 
-        add_queue_to_env(queue)
+        try:
+            result = self._run_sub(cmd, queue)
+        except:
+            # we generally shouldn't get here, but just in case,
+            # handle it so that the main process doesn't hang at the
+            # end when it tries to join all of the concurrent processes.
+            self.status = 'FAIL'
+            self.err_msg = traceback.format_exc()
+            result = self
 
-        p = Popen(cmd, stdout=PIPE, stderr=PIPE, env=os.environ,
-                  universal_newlines=True)  # text mode
-        out, err = p.communicate()
-        if self.nocapture:
-            if out: print(out)
-            if err: print(err)
-
-        os.environ['TESTFLO_QUEUE'] = ''
-
-        result = queue.get()
         result.isolated = True
 
         return result
