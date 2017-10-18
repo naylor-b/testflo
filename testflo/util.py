@@ -112,7 +112,7 @@ def _get_parser():
                         default=[])
 
     parser.add_argument('--timeout', action='store', dest='timeout',
-                        default=60, type=float,
+                        default=-1.0, type=float,
                         help='Timeout in seconds. Test will be terminated if it takes longer than timeout.')
 
     return parser

@@ -174,13 +174,18 @@ class Test(object):
                       universal_newlines=True)  # text mode
             count = 0
             timedout = False
-            while p.poll() is None:
-                if count * .2 > self.timeout:
-                    p.terminate()
-                    timedout = True
-                    break
-                time.sleep(.2)
-                count += 1
+
+            if self.timeout < 0.0:  # infinite timeout
+                p.wait()
+            else:
+                poll_interval = 0.2
+                while p.poll() is None:
+                    if count * poll_interval > self.timeout:
+                        p.terminate()
+                        timedout = True
+                        break
+                    time.sleep(poll_interval)
+                    count += 1
 
             err.close()
 
