@@ -42,7 +42,7 @@ class ResultSummary(object):
             yield test
 
         # now summarize the run
-        if skips:
+        if skips and self.options.verbose:  # only list skips in verbose mode
             write("\n\nThe following tests were skipped:\n")
             for s in sorted(skips):
                 write(s)

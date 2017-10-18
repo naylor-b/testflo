@@ -111,6 +111,11 @@ def _get_parser():
                         help='Pattern to use for test discovery. Multiple patterns are allowed.',
                         default=[])
 
+    parser.add_argument('--timeout', action='store', dest='timeout',
+                        default=-1.0, type=float,
+                        help='Timeout in seconds. Test will be terminated if it takes longer than timeout. Only'
+                             ' works for tests running in a subprocess (MPI and isolated).')
+
     return parser
 
 def _get_testflo_subproc_args():
