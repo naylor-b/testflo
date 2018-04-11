@@ -164,11 +164,11 @@ class Test(object):
 
             if self.nocapture:
                 out = sys.stdout
+                err = sys.stderr
             else:
                 out = open(os.devnull, 'w')
-
-            errfd, tmperr = mkstemp()
-            err = os.fdopen(errfd, 'w')
+                errfd, tmperr = mkstemp()
+                err = os.fdopen(errfd, 'w')
 
             p = Popen(cmd, stdout=out, stderr=err, env=os.environ,
                       universal_newlines=True)  # text mode
@@ -187,11 +187,13 @@ class Test(object):
                     time.sleep(poll_interval)
                     count += 1
 
-            err.close()
-
-            with open(tmperr, 'r') as f:
-                errmsg = f.read()
-            os.remove(tmperr)
+            if self.nocapture:
+                errmsg = ''
+            else:
+                err.close()
+                with open(tmperr, 'r') as f:
+                    errmsg = f.read()
+                os.remove(tmperr)
 
             os.environ['TESTFLO_QUEUE'] = ''
 
@@ -212,13 +214,13 @@ class Test(object):
             self.status = 'FAIL'
             self.err_msg = traceback.format_exc()
             result = self
-
-            err.close()
         finally:
-            if not self.nocapture:
+            if self.nocapture:
+                sys.stdout.flush()
+                sys.stderr.flush()
+            else:
                 out.close()
-            sys.stdout.flush()
-            sys.stderr.flush()
+                err.close()
 
         return result
 
@@ -319,9 +321,10 @@ class Test(object):
 
             if self.nocapture:
                 outstream = sys.stdout
+                errstream = sys.stderr
             else:
                 outstream = DevNull()
-            errstream = cStringIO()
+                errstream = cStringIO()
 
             done = False
             expected = expected2 = expected3 = False
@@ -379,7 +382,10 @@ class Test(object):
 
                 self.end_time = time.time()
                 self.status = status
-                self.err_msg = errstream.getvalue()
+                if self.nocapture:
+                    self.err_msg = ""
+                else:
+                    self.err_msg = errstream.getvalue()
                 self.memory_usage = get_memory_usage()
                 self.expected_fail = expected or expected2 or expected3
 
