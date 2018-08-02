@@ -339,6 +339,10 @@ def read_test_file(testfile):
     """Reads a file containing one testspec per line."""
     with open(os.path.abspath(testfile), 'r') as f:
         for line in f:
+            idx = line.find('#')
+            if idx >= 0:
+                line = line[:idx]
+
             line = line.strip()
             if line:
                 yield line
