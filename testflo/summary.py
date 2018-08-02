@@ -12,6 +12,12 @@ class ResultSummary(object):
         self.options = options
         self._start_time = time.time()
 
+    def get_test_name(self, test):
+        if self.options.full_path:
+            return test.spec
+        else:
+            return test.short_name()
+
     def get_iter(self, input_iter):
         oks = 0
         total = 0
@@ -26,7 +32,7 @@ class ResultSummary(object):
 
             if test.status == 'OK':
                 if test.expected_fail:
-                    fails.append(test.short_name())
+                    fails.append(self.get_test_name(test))
                 else:
                     oks += 1
                 test_sum_time += (test.end_time-test.start_time)
@@ -34,10 +40,10 @@ class ResultSummary(object):
                 if test.expected_fail:
                     oks += 1
                 else:
-                    fails.append(test.short_name())
+                    fails.append(self.get_test_name(test))
                 test_sum_time += (test.end_time-test.start_time)
             elif test.status == 'SKIP':
-                skips.append(test.short_name())
+                skips.append(self.get_test_name(test))
 
             yield test
 
