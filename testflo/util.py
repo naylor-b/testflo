@@ -77,8 +77,10 @@ def _get_parser():
                         help="Stop after the first test failure, or as soon as possible"
                              " when running concurrent tests.")
     parser.add_argument('-s', '--nocapture', action='store_true', dest='nocapture',
-                        help="Standard output (stdout) will not be captured and will be"
-                             " written to the screen immediately.")
+                        help="stdout and stderr will not be captured and will be"
+                             " written to the screen immediately. It's best to use this with "
+                             "-n 1 or with --pre_announce so the output will be clearly associated"
+                             " with the correct test.")
     parser.add_argument('--coverage', action='store_true', dest='coverage',
                         help="Perform coverage analysis and display results on stdout")
     parser.add_argument('--coverage-html', action='store_true', dest='coveragehtml',
