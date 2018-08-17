@@ -1,6 +1,8 @@
 """
 Methods and class for running tests.
 """
+from __future__ import print_function
+
 import sys
 import os
 
@@ -53,7 +55,7 @@ class TestRunner(object):
             stop = False
             for test in tests:
                 if self.pre_announce:
-                    print("    about to run %s" % test.short_name())
+                    print("    about to run %s " % test.short_name(), end='')
                     sys.stdout.flush()
                 result = test.run(self._queue)
                 yield result
