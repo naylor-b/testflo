@@ -6,8 +6,10 @@ setup(name='testflo',
       description="A simple flow-based testing framework",
       long_description="""
         usage: testflo [options]
+
         positional arguments:
           test                  A test method, test case, module, or directory to run.
+        
         optional arguments:
           -h, --help            show this help message and exit
           -c FILE, --config FILE
@@ -33,6 +35,7 @@ setup(name='testflo',
                                 can help track down a hanging test. This automatically
                                 sets -n 1.
           -f, --fail            Save failed tests to failtests.in file.
+          --full_path           Display full test specs instead of shortened names.
           -i, --isolated        Run each test in a separate subprocess.
           --nompi               Force all tests to run without MPI. This can be useful
                                 for debugging.
@@ -56,7 +59,11 @@ setup(name='testflo',
                                 benchmark_data.csv.
           --noreport            Don't create a test results file.
           -m GLOB, --match GLOB, --testmatch GLOB
-                                Pattern to use for test discovery.
+                                Pattern to use for test discovery. Multiple patterns
+                                are allowed.
+          --timeout TIMEOUT     Timeout in seconds. Test will be terminated if it
+                                takes longer than timeout. Only works for tests
+                                running in a subprocess (MPI and isolated).
       """,
       license='Apache 2.0',
       install_requires=[
