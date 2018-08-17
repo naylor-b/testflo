@@ -52,7 +52,7 @@ setup(name='testflo',
                                 packages.
           --cover-omit FILE     Add a file name pattern to remove it from coverage.
           -b, --benchmark       Specifies that benchmarks are to be run rather than
-                                tests, so only files starting with "benchmark_" will
+                                tests, so only files starting with "benchmark\_" will
                                 be executed.
           -d FILE, --datafile FILE
                                 Name of benchmark data file. Default is
