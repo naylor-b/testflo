@@ -177,13 +177,13 @@ skip_dirs=site-packages,
                 verbose = int(options.verbose)
 
             pipeline.extend([
-                ResultPrinter(verbose=verbose).get_iter,
+                ResultPrinter(options, verbose=verbose).get_iter,
                 ResultSummary(options).get_iter,
             ])
             if not options.noreport:
                 # print verbose results and summary to a report file
                 pipeline.extend([
-                    ResultPrinter(report, verbose=1).get_iter,
+                    ResultPrinter(options, report, verbose=1).get_iter,
                     ResultSummary(options, stream=report).get_iter,
                 ])
 

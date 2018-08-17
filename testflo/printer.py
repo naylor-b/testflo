@@ -22,8 +22,9 @@ class ResultPrinter(object):
     still displayed in verbose form.
     """
 
-    def __init__(self, stream=sys.stdout, verbose=0):
+    def __init__(self, options, stream=sys.stdout, verbose=0):
         self.stream = stream
+        self.options = options
         self.verbose = verbose
 
     def get_iter(self, input_iter):
@@ -65,5 +66,7 @@ class ResultPrinter(object):
                                                     stats, result.memory_usage))
         else:
             stream.write(_result_map[(result.status, result.expected_fail)])
+            if self.options.pre_announce:
+                stream.write('\n')
 
         stream.flush()
