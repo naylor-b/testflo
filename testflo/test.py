@@ -110,7 +110,7 @@ class Test(object):
 
         if not err_msg:
             with TestContext(self):
-                self.mod, self.tcase, self.funcname, self.nprocs = self._get_test_info()
+                self.mod, self.tcase, self.funcname, self.nprocs, self.isolated = self._get_test_info()
         else:
             self.mod = self.tcase = self.funcname = None
 
@@ -131,11 +131,12 @@ class Test(object):
         return iter((self,))
 
     def _get_test_info(self):
-        """Get the test's module, testcase (if any), function name and
-        N_PROCS (for mpi tests).
+        """Get the test's module, testcase (if any), function name,
+        N_PROCS (for mpi tests) and ISOLATED.
         """
         parent = funcname = mod = testcase = None
         nprocs = 0
+        isolated = False
 
         try:
             mod, testcase, funcname = _parse_test_path(self.spec)
@@ -150,10 +151,11 @@ class Test(object):
                 if testcase is not None:
                     parent = testcase
                     nprocs = getattr(testcase, 'N_PROCS', 0)
+                    isolated = getattr(testcase, 'ISOLATED', False)
                 else:
                     parent = mod
 
-        return mod, testcase, funcname, nprocs
+        return mod, testcase, funcname, nprocs, isolated
 
     def _run_sub(self, cmd, queue):
         """
@@ -280,7 +282,7 @@ class Test(object):
         if queue is not None:
             if MPI is not None and self.mpi and self.nprocs > 0:
                 return self._run_mpi(queue)
-            elif self.isolated or self.nprocs > 0:
+            elif self.isolated:
                 return self._run_isolated(queue)
 
         with TestContext(self):
