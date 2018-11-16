@@ -98,7 +98,6 @@ class Test(object):
         self.load5m = 0.0
         self.load15m = 0.0
         self.nocapture = options.nocapture
-        self.isolated = options.isolated
         self.mpi = not options.nompi
         self.timeout = options.timeout
         self.expected_fail = False
@@ -110,7 +109,8 @@ class Test(object):
 
         if not err_msg:
             with TestContext(self):
-                self.mod, self.tcase, self.funcname, self.nprocs, self.isolated = self._get_test_info()
+                self.mod, self.tcase, self.funcname, self.nprocs, isolated = self._get_test_info()
+                self.isolated = isolated or options.isolated
         else:
             self.mod = self.tcase = self.funcname = None
 
