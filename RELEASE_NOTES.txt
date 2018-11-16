@@ -1,3 +1,8 @@
+testflo version 1.3.2 Release Notes
+Nov 17, 2018
+
+* added support for ISOLATED attribute
+
 testflo version 1.3.1 Release Notes
 Aug 17, 2018
 
