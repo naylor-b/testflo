@@ -280,7 +280,7 @@ class Test(object):
         if queue is not None:
             if MPI is not None and self.mpi and self.nprocs > 0:
                 return self._run_mpi(queue)
-            elif self.isolated:
+            elif self.isolated or self.nprocs > 0:
                 return self._run_isolated(queue)
 
         with TestContext(self):
