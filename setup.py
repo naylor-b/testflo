@@ -2,14 +2,14 @@
 from distutils.core import setup
 
 setup(name='testflo',
-      version='1.3.1',
+      version='1.3.2',
       description="A simple flow-based testing framework",
       long_description="""
         usage: testflo [options]
 
         positional arguments:
           test                  A test method, test case, module, or directory to run.
-        
+
         optional arguments:
           -h, --help            show this help message and exit
           -c FILE, --config FILE
