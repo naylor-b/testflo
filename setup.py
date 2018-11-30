@@ -1,8 +1,14 @@
-
 from distutils.core import setup
 
+import re
+
+__version__ = re.findall(
+    r"""__version__ = ["']+([0-9\.]*)["']+""",
+    open('testflo/__init__.py').read(),
+)[0]
+
 setup(name='testflo',
-      version='1.3.2',
+      version=__version__,
       description="A simple flow-based testing framework",
       long_description="""
         usage: testflo [options]
