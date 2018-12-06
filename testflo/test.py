@@ -289,7 +289,7 @@ class Test(object):
 
         with TestContext(self):
             if self.tcase is None:
-                mod, testcase, funcname, nprocs = self._get_test_info()
+                mod, testcase, funcname, nprocs, _ = self._get_test_info()
             else:
                 mod, testcase, funcname, nprocs = (self.mod, self.tcase, self.funcname, self.nprocs)
 
