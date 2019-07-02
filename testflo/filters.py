@@ -29,6 +29,6 @@ class FailFilter(object):
     def get_iter(self, input_iter):
         with open(self.outfile, 'w') as f:
             for result in input_iter:
-                if result.status == 'FAIL':
+                if result.status == 'FAIL' and not result.expected_fail:
                     print(result.spec, file=f)
                 yield result
