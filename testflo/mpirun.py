@@ -38,7 +38,10 @@ if __name__ == '__main__':
         # collect results
         results = comm.gather(test, root=0)
         if comm.rank == 0:
-            total_mem_usage = sum(r.memory_usage for r in results)
+            if not all([isinstance(r, Test) for r in results]):
+                print("\nNot all results gathered are Test objects.  "
+                      "You may have out-of-sync collective MPI calls.\n")
+            total_mem_usage = sum(r.memory_usage for r in results if isinstance(r, Test))
             test.memory_usage = total_mem_usage
 
             # check for errors and record error message
