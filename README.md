@@ -97,9 +97,7 @@ Skipped: 0
 
 
 Ran 258 tests using 8 processes
-Sum of test times: 00:00:6.09
 Wall clock time:   00:00:1.82
-Speedup: 3.347731
 
 ```
 
@@ -151,9 +149,7 @@ Skipped: 0
 
 
 Ran 30 tests using 8 processes
-Sum of test times: 00:00:1.24
-Wall clock time:   00:00:1.17
-Speedup: 1.054168
+Wall clock time:   00:05:5.01
 
 ```
 
@@ -162,7 +158,7 @@ Operating Systems and Python Versions
 
 testflo is used to test OpenMDAO as part of its CI process,
 so we run it nearly every day on linux, Windows and OS X under
-python 2.7 and 3.5.
+python 2.7 and 3.6.
 
 
 You can install testflo directly from github using the following command:
