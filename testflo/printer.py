@@ -2,9 +2,6 @@
 import sys
 
 from testflo.util import elapsed_str
-from testflo.options import get_options
-
-options = get_options()
 
 _result_map = {
     ('FAIL', False): 'F',

@@ -28,6 +28,8 @@ import os
 import sys
 import six
 import time
+import warnings
+import multiprocessing
 
 from fnmatch import fnmatch, fnmatchcase
 
@@ -72,7 +74,7 @@ def run_pipeline(source, pipe):
 
     return_code = 0
 
-    # iterate over the last iter in the pipline and we're done
+    # iterate over the last iter in the pipeline and we're done
     for result in iters[-1]:
         if result.status == 'FAIL' and not result.expected_fail:
             return_code = 1
@@ -85,6 +87,7 @@ def main(args=None):
         args = sys.argv[1:]
 
     options = get_options(args)
+    nprocs = options.num_procs
 
     options.skip_dirs = []
 
@@ -103,6 +106,16 @@ skip_dirs=site-packages,
     read_config_file(rcfile, options)
     if options.cfg:
         read_config_file(options.cfg, options)
+
+    if nprocs is None and options.num_procs is None:
+        try:
+            options.num_procs = multiprocessing.cpu_count()
+        except:
+            warnings.warn('CPU count could not be determined. Defaulting to 1')
+            options.num_procs = 1
+
+    if nprocs is not None:
+        options.num_procs = nprocs
 
     tests = options.tests
     if options.testfile:
@@ -136,12 +149,12 @@ skip_dirs=site-packages,
     if options.benchmark:
         options.num_procs = 1
         options.isolated = True
-        discoverer = TestDiscoverer(module_pattern=six.text_type('benchmark*.py'),
+        discoverer = TestDiscoverer(options, module_pattern=six.text_type('benchmark*.py'),
                                     func_match=lambda f: fnmatchcase(f, 'benchmark*'),
                                     dir_exclude=dir_exclude)
         benchmark_file = open(options.benchmarkfile, 'a')
     else:
-        discoverer = TestDiscoverer(dir_exclude=dir_exclude,
+        discoverer = TestDiscoverer(options, dir_exclude=dir_exclude,
                                     func_match=func_matcher)
         benchmark_file = open(os.devnull, 'a')
 

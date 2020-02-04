@@ -1,6 +1,7 @@
 
 import traceback
 from inspect import getmembers, isclass, isfunction
+from importlib import import_module
 from unittest import TestCase
 import six
 
@@ -21,9 +22,10 @@ def _has_class_fixture(tcase):
 
 class TestDiscoverer(object):
 
-    def __init__(self, module_pattern=six.text_type('test*.py'),
+    def __init__(self, options, module_pattern=six.text_type('test*.py'),
                        func_match=lambda f: fnmatchcase(f, 'test*'),
                        dir_exclude=None):
+        self.options = options
         self.module_pattern = module_pattern
         self.func_match = func_match
         self.dir_exclude = dir_exclude
@@ -54,7 +56,7 @@ class TestDiscoverer(object):
                         yield result
 
         # Every test left has been group together either by module or
-        # TestCase or both, due to the presense of module or testcase class level
+        # TestCase or both, due to the presence of module or testcase class level
         # setup/teardown, and we need to run each group on the same
         # process so that we can execute the module or class level setup/teardown
         # only once while impacting all of the tests in that group.
@@ -68,7 +70,7 @@ class TestDiscoverer(object):
             tests[-1]._tcase_fixture_last = True
 
             # check to see if this TestCase is part of a module with setUpModule/tearDownModule
-            if tests[0].mod in self._mod_fixture_groups:
+            if tests[0].modpath in self._mod_fixture_groups:
                 # these tests are already part of a module fixture, so we
                 # don't want to execute them a second time
                 continue
@@ -95,18 +97,21 @@ class TestDiscoverer(object):
         and/or part of a TestCase with setUpClass/tearDownClass, then save it
         for later, else return it.
         """
+        mod = import_module(test.modpath)
+        if test.modpath in self._mod_fixture_groups:
+            self._mod_fixture_groups[test.modpath].append(test)
+        elif hasattr(mod, 'setUpModule') or hasattr(mod, 'tearDownModule'):
+            self._mod_fixture_groups[test.modpath] = [test]
 
-        if test.mod in self._mod_fixture_groups:
-            self._mod_fixture_groups[test.mod].append(test)
-        elif hasattr(test.mod, 'setUpModule') or hasattr(test.mod, 'tearDownModule'):
-            self._mod_fixture_groups[test.mod] = [test]
+        full_tcase = (test.modpath, test.tcasename)
+        testcase = getattr(mod, test.tcasename) if test.tcasename else None
+        if full_tcase in self._tcase_fixture_groups:
+            self._tcase_fixture_groups[full_tcase].append(test)
+        elif _has_class_fixture(testcase):
+            self._tcase_fixture_groups[full_tcase] = [test]
 
-        if test.tcase in self._tcase_fixture_groups:
-            self._tcase_fixture_groups[test.tcase].append(test)
-        elif _has_class_fixture(test.tcase):
-            self._tcase_fixture_groups[test.tcase] = [test]
-
-        if not (test.mod in self._mod_fixture_groups or test.tcase in self._tcase_fixture_groups):
+        if not (test.modpath in self._mod_fixture_groups or
+                full_tcase in self._tcase_fixture_groups):
             return test
 
     def _dir_iter(self, dname):
@@ -128,7 +133,10 @@ class TestDiscoverer(object):
         try:
             fname, mod = get_module(filename)
         except:
-            yield Test(filename, 'FAIL', err_msg=traceback.format_exc())
+            t =  Test(filename, self.options)
+            t.status = 'FAIL'
+            t.err_msg=traceback.format_exc()
+            yield t
         else:
             if basename(fname).startswith(six.text_type('__init__.')):
                 for result in self._dir_iter(dirname(fname)):
@@ -140,7 +148,7 @@ class TestDiscoverer(object):
                             yield result
 
                     elif isfunction(obj) and self.func_match(name):
-                        yield Test(':'.join((filename, obj.__name__)))
+                        yield Test(':'.join((filename, obj.__name__)), self.options)
 
     def _testcase_iter(self, fname, testcase):
         """Returns an iterator of Test objects coming from a given
@@ -149,7 +157,7 @@ class TestDiscoverer(object):
         tcname = ':'.join((fname, testcase.__name__))
         for name, method in getmembers(testcase, ismethod):
             if self.func_match(name):
-                yield Test('.'.join((tcname, method.__name__)))
+                yield Test('.'.join((tcname, method.__name__)), self.options)
 
     def _testspec_iter(self, testspec):
         """Returns an iterator of Test objects found in the
@@ -168,17 +176,22 @@ class TestDiscoverer(object):
         if rest:
             tcasename, _, method = rest.partition('.')
             if method:
-                yield Test(testspec)
+                yield Test(testspec, self.options)
             else:  # could be a test function or a TestCase
                 try:
                     fname, mod = get_module(module)
                 except:
-                    yield Test(testspec, 'FAIL', err_msg=traceback.format_exc())
+                    t = Test(testspec, self.options)
+                    t.status = 'FAIL'
+                    t.err_msg = traceback.format_exc()
                     return
                 try:
                     tcase = get_testcase(fname, mod, tcasename)
                 except (AttributeError, TypeError):
-                    yield Test(testspec)
+                    t = Test(testspec, self.options)
+                    t.status = 'FAIL'
+                    t.err_msg = traceback.format_exc()
+                    yield t
                 else:
                     for test in self._testcase_iter(fname, tcase):
                         yield test

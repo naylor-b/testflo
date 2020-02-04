@@ -7,14 +7,10 @@ import sys
 import itertools
 import inspect
 import warnings
+from importlib import import_module
 
 from six import string_types, PY3
 from six.moves.configparser import ConfigParser
-
-try:
-    from multiprocessing import cpu_count
-except ImportError:
-    pass
 
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile,  abspath, split, splitext
@@ -41,14 +37,8 @@ def _get_parser():
                         help='Specifies a time limit in seconds for tests to be saved to '
                              'the quicktests.in file.')
 
-    try:
-        cpus = cpu_count()
-    except:
-        warnings.warn('CPU count could not be determined. Defaulting to 1')
-        cpus = 1
-
     parser.add_argument('-n', '--numprocs', type=int, action='store',
-                        dest='num_procs', metavar='NUM_PROCS', default=cpus,
+                        dest='num_procs', metavar='NUM_PROCS',
                         help='Number of processes to run. By default, this will '
                              'use the number of CPUs available.  To force serial'
                              ' execution, specify a value of 1.')
@@ -69,7 +59,7 @@ def _get_parser():
     parser.add_argument('-f', '--fail', action='store_true', dest='save_fails',
                         help="Save failed tests to failtests.in file.")
     parser.add_argument('--full_path', action='store_true', dest='full_path',
-                        help="Display full test specs instead of shortened names.")                        
+                        help="Display full test specs instead of shortened names.")
     parser.add_argument('-i', '--isolated', action='store_true', dest='isolated',
                         help="Run each test in a separate subprocess.")
     parser.add_argument('--nompi', action='store_true', dest='nompi',
@@ -113,14 +103,13 @@ def _get_parser():
                         help='Pattern to use for test discovery. Multiple patterns are allowed.',
                         default=[])
 
-    parser.add_argument('--timeout', action='store', dest='timeout',
-                        default=-1.0, type=float,
+    parser.add_argument('--timeout', action='store', dest='timeout', type=float,
                         help='Timeout in seconds. Test will be terminated if it takes longer than timeout. Only'
                              ' works for tests running in a subprocess (MPI and isolated).')
 
     return parser
 
-def _get_testflo_subproc_args():
+def _options2args():
     """Gets the testflo args that should be used in subprocesses."""
 
     cmdset = set([
@@ -147,6 +136,7 @@ def _get_testflo_subproc_args():
         i += 1
 
     return keep
+
 
 def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
@@ -246,7 +236,7 @@ def find_files(start, match=None, exclude=None,
         return iters[0]
 
 
-def get_module_path(fpath):
+def fpath2modpath(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
     """
@@ -298,7 +288,7 @@ def get_module(fname):
     """
 
     if fname.endswith('.py'):
-        modpath = get_module_path(fname)
+        modpath = fpath2modpath(fname)
         if not modpath:
             raise RuntimeError("can't find module %s" % fname)
     else:
@@ -311,8 +301,7 @@ def get_module(fname):
     start_coverage()
 
     try:
-        __import__(modpath)
-        mod = sys.modules[modpath]
+        mod = import_module(modpath)
     except ImportError:
         # this might be a module that's not in the same
         # environment as testflo, so try temporarily prepending
@@ -322,12 +311,11 @@ def get_module(fname):
         sys.path.extend(parent_dirs(fname))
         sys.path.append(os.getcwd())
         try:
-            __import__(modpath)
-            mod = sys.modules[modpath]
+            mod = import_module(modpath)
             # don't keep this module around in sys.modules, but
             # keep a reference to it, else multiprocessing on Windows
             # will have problems
-            _store[modpath] = sys.modules[modpath]
+            _store[modpath] = mod
             del sys.modules[modpath]
         finally:
             sys.path = oldpath

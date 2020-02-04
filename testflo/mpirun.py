@@ -22,12 +22,13 @@ if __name__ == '__main__':
     queue = get_client_queue()
     os.environ['TESTFLO_QUEUE'] = ''
 
-    setup_coverage(get_options())
+    options = get_options()
+    setup_coverage(options)
 
     try:
         try:
             comm = MPI.COMM_WORLD
-            test = Test(sys.argv[1])
+            test = Test(sys.argv[1], options)
             test.nocapture = True # so we don't lose stdout
             test.run()
         except:

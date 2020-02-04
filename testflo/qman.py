@@ -1,9 +1,7 @@
 import os
 import sys
-import multiprocessing
 
 import socket
-from multiprocessing.managers import SyncManager, RebuildProxy, AutoProxy, Token
 
 
 # pickling the queue proxy gets rid of the authkey, so use a fixed authkey here
@@ -11,6 +9,7 @@ from multiprocessing.managers import SyncManager, RebuildProxy, AutoProxy, Token
 _testflo_authkey = b'foobarxxxx'
 
 def get_server_queue():
+    from multiprocessing.managers import SyncManager
     #FIXME: some OSX users were getting "Can't assign requested address" errors
     # if we use socket.gethostname() for the address. Changing it to
     # 'localhost' seems to fix the issue, but I don't know why. We had to
@@ -27,6 +26,7 @@ def get_server_queue():
     return manager, manager.Queue()
 
 def get_client_queue():
+    from multiprocessing.managers import RebuildProxy, AutoProxy, Token
     qstr = os.environ.get('TESTFLO_QUEUE')
 
     if qstr:

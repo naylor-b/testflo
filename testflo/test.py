@@ -5,8 +5,10 @@ import sys
 import time
 import traceback
 from inspect import isclass
-from subprocess import Popen, PIPE
+import subprocess
 from tempfile import mkstemp
+from importlib import import_module
+import multiprocessing
 
 from types import FunctionType, ModuleType
 from six.moves import cStringIO
@@ -21,16 +23,8 @@ else:
 from testflo.cover import start_coverage, stop_coverage
 
 from testflo.util import get_module, ismethod, get_memory_usage, \
-                         _get_testflo_subproc_args
+                         _options2args
 from testflo.devnull import DevNull
-from testflo.options import get_options
-
-try:
-    from mpi4py import MPI
-except ImportError:
-    MPI = None
-
-options = get_options()
 
 
 from distutils import spawn
@@ -86,45 +80,31 @@ class Test(object):
     start/end times and resource usage data.
     """
 
-    def __init__(self, testspec, status=None, err_msg=''):
+    def __init__(self, testspec, options):
         self.spec = testspec
-        self.status = status
-        self.err_msg = err_msg
+        self.options = options
+        self.test_dir = os.path.dirname(testspec.split(':',1)[0])
+
+        self.status = None
+        self.err_msg = ''
+        self.mpi = False
+
         self.memory_usage = 0
         self.nprocs = 0
+        self.isolated = False
         self.start_time = 0
         self.end_time = 0
-        self.load1m = 0.0
-        self.load5m = 0.0
-        self.load15m = 0.0
-        self.nocapture = options.nocapture
-        self.isolated = options.isolated
-        self.mpi = not options.nompi
-        self.timeout = options.timeout
+        self.modpath = None
+        self.tcasename = None
+        self.funcname = None
+        self.load = (0.0, 0.0, 0.0)
         self.expected_fail = False
-        self.test_dir = os.path.dirname(testspec.split(':',1)[0])
         self._mod_fixture_first = False
         self._mod_fixture_last = False
         self._tcase_fixture_first = False
         self._tcase_fixture_last = False
 
-        if not err_msg:
-            with TestContext(self):
-                self.mod, self.tcase, self.funcname, self.nprocs, isolated = self._get_test_info()
-                if isolated:
-                    self.isolated = isolated
-        else:
-            self.mod = self.tcase = self.funcname = None
-
-        if self.err_msg:
-            self.start_time = self.end_time = time.time()
-
-    def __getstate__(self):
-        """ Get rid of module and testcase so we don't pickle them. """
-        state = self.__dict__.copy()
-        state['mod'] = None
-        state['tcase'] = None
-        return state
+        self._get_test_info()
 
     def __iter__(self):
         """Allows Test to be iterated over so we don't have to check later
@@ -134,80 +114,52 @@ class Test(object):
 
     def _get_test_info(self):
         """Get the test's module, testcase (if any), function name,
-        N_PROCS (for mpi tests) and ISOLATED.
+        N_PROCS (for mpi tests) and ISOLATED and set our attributes.
         """
-        parent = funcname = mod = testcase = None
-        nprocs = 0
-        isolated = False
-
-        try:
-            mod, testcase, funcname = _parse_test_path(self.spec)
-        except Exception:
-            self.status = 'FAIL'
-            self.err_msg = traceback.format_exc()
-        else:
-            if funcname is None:
+        with TestContext(self):
+            try:
+                mod, self.tcasename, self.funcname = _parse_test_path(self.spec)
+                self.modpath = mod.__name__
+            except Exception:
                 self.status = 'FAIL'
-                self.err_msg = 'ERROR: test function not specified.'
+                self.err_msg = traceback.format_exc()
             else:
-                if testcase is not None:
-                    parent = testcase
-                    nprocs = getattr(testcase, 'N_PROCS', 0)
-                    isolated = getattr(testcase, 'ISOLATED', False)
+                if self.funcname is None:
+                    self.status = 'FAIL'
+                    self.err_msg = 'ERROR: test function not specified.'
                 else:
-                    parent = mod
+                    if self.tcasename is not None:
+                        testcase = getattr(mod, self.tcasename)
+                        self.nprocs = getattr(testcase, 'N_PROCS', 0)
+                        self.isolated = getattr(testcase, 'ISOLATED', False)
 
-        return mod, testcase, funcname, nprocs, isolated
+        if self.err_msg:
+            self.start_time = self.end_time = time.time()
 
-    def _run_sub(self, cmd, queue):
+    def _run_sub(self, cmd, queue, env):
         """
         Run a command in a subprocess.
         """
         try:
             add_queue_to_env(queue)
 
-            if self.nocapture:
-                out = sys.stdout
+            if self.options.nocapture:
+                stdout = subprocess.PIPE
+                stderr = subprocess.STDOUT
             else:
-                out = open(os.devnull, 'w')
+                stdout = subprocess.DEVNULL
+                stderr = subprocess.PIPE
 
-            errfd, tmperr = mkstemp()
-            err = os.fdopen(errfd, 'w')
+            p = subprocess.run(cmd, stdout=stdout, stderr=stderr, env=env,
+                               timeout=self.options.timeout, universal_newlines=True)
 
-            p = Popen(cmd, stdout=out, stderr=err, env=os.environ,
-                      universal_newlines=True)  # text mode
-            count = 0
-            timedout = False
-
-            if self.timeout < 0.0:  # infinite timeout
-                p.wait()
-            else:
-                poll_interval = 0.2
-                while p.poll() is None:
-                    if count * poll_interval > self.timeout:
-                        p.terminate()
-                        timedout = True
-                        break
-                    time.sleep(poll_interval)
-                    count += 1
-
-            err.close()
-
-            with open(tmperr, 'r') as f:
-                errmsg = f.read()
-            os.remove(tmperr)
-
-            os.environ['TESTFLO_QUEUE'] = ''
-
-            if timedout:
-                result = self
+            if p.returncode != 0:
                 self.status = 'FAIL'
-                self.err_msg = 'TIMEOUT after %s sec. ' % self.timeout
-                if errmsg:
-                    self.err_msg += errmsg
+                self.err_msg = p.stdout if self.options.nocapture else p.stderr
+                result = self
             else:
-                if p.returncode != 0:
-                    print(errmsg)
+                if self.options.nocapture:
+                    print(p.stdout)
                 result = queue.get()
         except:
             # we generally shouldn't get here, but just in case,
@@ -216,13 +168,6 @@ class Test(object):
             self.status = 'FAIL'
             self.err_msg = traceback.format_exc()
             result = self
-
-            err.close()
-        finally:
-            if not self.nocapture:
-                out.close()
-            sys.stdout.flush()
-            sys.stderr.flush()
 
         return result
 
@@ -236,7 +181,7 @@ class Test(object):
                self.spec]
 
         try:
-            result = self._run_sub(cmd, queue)
+            result = self._run_sub(cmd, queue, os.environ)
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -253,17 +198,16 @@ class Test(object):
         """This runs the test using mpirun in a subprocess,
         then returns the Test object.
         """
-
         try:
             if mpirun_exe is None:
                 raise Exception("mpirun or mpiexec was not found in the system path.")
 
-            cmd = [mpirun_exe, '-n', str(self.nprocs),
+            cmd =  [mpirun_exe, '-n', str(self.nprocs),
                    sys.executable,
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
-                   self.spec] + _get_testflo_subproc_args()
+                   self.spec] + _options2args()
 
-            result = self._run_sub(cmd, queue)
+            result = self._run_sub(cmd, queue, os.environ)
 
         except:
             # we generally shouldn't get here, but just in case,
@@ -273,6 +217,8 @@ class Test(object):
             self.err_msg = traceback.format_exc()
             result = self
 
+        result.mpi = True
+
         return result
 
     def run(self, queue=None):
@@ -281,17 +227,22 @@ class Test(object):
             # premature failure occurred (or dry run), just return
             return self
 
-        if queue is not None:
-            if MPI is not None and self.mpi and self.nprocs > 0:
+        MPI = None
+        if queue is not None and self.nprocs > 0 and not self.options.nompi:
+            try:
+                from mpi4py import MPI
+            except ImportError:
+                pass
+            else:
                 return self._run_mpi(queue)
-            elif self.isolated:
-                return self._run_isolated(queue)
+        elif self.options.isolated:
+            return self._run_isolated(queue)
 
         with TestContext(self):
-            if self.tcase is None:
-                mod, testcase, funcname, nprocs, _ = self._get_test_info()
-            else:
-                mod, testcase, funcname, nprocs = (self.mod, self.tcase, self.funcname, self.nprocs)
+            mod = import_module(self.modpath)
+
+            testcase = getattr(mod, self.tcasename) if self.tcasename is not None else None
+            funcname, nprocs = (self.funcname, self.nprocs)
 
             mod_setup = mod_teardown = tcase_setup = tcase_teardown = None
 
@@ -307,10 +258,10 @@ class Test(object):
                     tcase_teardown = getattr(testcase, 'tearDownClass', None)
 
                 parent = testcase(methodName=funcname)
-                # if we get here an nprocs > 0, we need
+                # if we get here and nprocs > 0, we need
                 # to set .comm in our TestCase instance.
                 if nprocs > 0:
-                    if MPI is not None and self.mpi:
+                    if MPI is not None and not self.options.nompi:
                         parent.comm = MPI.COMM_WORLD
                     else:
                         parent.comm = FakeComm()
@@ -321,7 +272,7 @@ class Test(object):
                 parent = mod
                 setup = teardown = None
 
-            if self.nocapture:
+            if self.options.nocapture:
                 outstream = sys.stdout
             else:
                 outstream = DevNull()
@@ -388,9 +339,9 @@ class Test(object):
                 self.expected_fail = expected or expected2 or expected3
 
                 if sys.platform == 'win32':
-                    self.load1m, self.load5m, self.load15m = (0.0, 0.0, 0.0)
+                    self.load = (0.0, 0.0, 0.0)
                 else:
-                    self.load1m, self.load5m, self.load15m = os.getloadavg()
+                    self.load = os.getloadavg()
 
             finally:
                 stop_coverage()
@@ -433,7 +384,7 @@ def _parse_test_path(testspec):
     indicates that that part of the testspec was not present.
     """
 
-    testcase = funcname = None
+    testcase = funcname = tcasename = None
     testspec = testspec.strip()
     parts = testspec.split(':')
     if len(parts) > 1 and parts[1].startswith('\\'):  # windows abs path
@@ -451,6 +402,7 @@ def _parse_test_path(testspec):
         objname, _, funcname = rest.partition('.')
         obj = getattr(mod, objname)
         if isclass(obj) and issubclass(obj, TestCase):
+            tcasename = objname
             testcase = obj
             if funcname:
                 meth = getattr(obj, funcname)
@@ -462,7 +414,8 @@ def _parse_test_path(testspec):
             raise TypeError("'%s' is not a TestCase or a function." %
                             objname)
 
-    return (mod, testcase, funcname)
+    return (mod, tcasename, funcname)
+
 
 def _try_call(func):
     """Calls the given method, captures stdout and stderr,
