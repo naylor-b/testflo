@@ -149,7 +149,7 @@ Skipped: 0
 
 
 Ran 30 tests using 8 processes
-Wall clock time:   00:05:5.01
+Wall clock time:   00:00:1.17
 
 ```
 
