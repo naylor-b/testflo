@@ -12,7 +12,6 @@ from multiprocessing import Queue, Process
 from testflo.cover import save_coverage
 from testflo.test import Test
 from testflo.options import get_options
-from testflo.qman import get_client_queue
 
 
 def worker(test_queue, done_queue, subproc_queue, worker_id):

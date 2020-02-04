@@ -8,7 +8,6 @@ from inspect import isclass
 import subprocess
 from tempfile import mkstemp
 from importlib import import_module
-import multiprocessing
 
 from types import FunctionType, ModuleType
 from six.moves import cStringIO
