@@ -9,8 +9,7 @@ import inspect
 import warnings
 from importlib import import_module
 
-from six import string_types, PY3
-from six.moves.configparser import ConfigParser
+from configparser import ConfigParser
 
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile,  abspath, split, splitext
@@ -194,32 +193,32 @@ def find_files(start, match=None, exclude=None,
     subject to directory filtering.
 
     """
-    startdirs = [start] if isinstance(start, string_types) else start
+    startdirs = [start] if isinstance(start, str) else start
     if len(startdirs) == 0:
         return iter([])
 
     if match is None:
         matcher = bool
-    elif isinstance(match, string_types):
+    elif isinstance(match, str):
         matcher = lambda name: fnmatch(name, match)
     else:
         matcher = match
 
     if dirmatch is None:
         dmatcher = bool
-    elif isinstance(dirmatch, string_types):
+    elif isinstance(dirmatch, str):
         dmatcher = lambda name: fnmatch(name, dirmatch)
     else:
         dmatcher = dirmatch
 
-    if isinstance(exclude, string_types):
+    if isinstance(exclude, str):
         fmatch = lambda name: matcher(name) and not fnmatch(name, exclude)
     elif exclude is not None:
         fmatch = lambda name: matcher(name) and not exclude(name)
     else:
         fmatch = matcher
 
-    if isinstance(direxclude, string_types):
+    if isinstance(direxclude, str):
         if dmatcher is bool:
             dmatch = lambda name: not fnmatch(name, direxclude)
         else:
@@ -383,8 +382,6 @@ def elapsed_str(elapsed):
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
-if PY3:
-    def ismethod(obj):
-        return inspect.isfunction(obj) or inspect.ismethod(obj)
-else:
-    ismethod = inspect.ismethod
+def ismethod(obj):
+    return inspect.isfunction(obj) or inspect.ismethod(obj)
+

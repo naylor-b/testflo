@@ -10,14 +10,10 @@ from tempfile import mkstemp
 from importlib import import_module
 
 from types import FunctionType, ModuleType
-from six.moves import cStringIO
-from six import PY2, PY3
+from io import StringIO
 
 from unittest import TestCase, SkipTest
-if PY2:
-    from unittest.case import _ExpectedFailure, _UnexpectedSuccess
-else:
-    from unittest.case import _UnexpectedSuccess
+from unittest.case import _UnexpectedSuccess
 
 from testflo.cover import start_coverage, stop_coverage
 
@@ -275,7 +271,7 @@ class Test(object):
                 outstream = sys.stdout
             else:
                 outstream = DevNull()
-            errstream = cStringIO()
+            errstream = StringIO()
 
             done = False
             expected = expected2 = expected3 = False
@@ -421,7 +417,7 @@ def _try_call(func):
     and returns the status (OK, SKIP, FAIL).
     """
     status = 'OK'
-    if PY3 and getattr(func, '__unittest_expecting_failure__', False):
+    if getattr(func, '__unittest_expecting_failure__', False):
         expected = True
     else:
         expected = False
@@ -434,8 +430,6 @@ def _try_call(func):
         status = 'OK'
         expected = True
     except Exception as err:
-        if PY2 and isinstance(err, _ExpectedFailure):
-            expected = True
         status = 'FAIL'
         sys.stderr.write(traceback.format_exc())
 

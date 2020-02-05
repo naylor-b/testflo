@@ -3,7 +3,6 @@ import traceback
 from inspect import getmembers, isclass, isfunction
 from importlib import import_module
 from unittest import TestCase
-import six
 
 from os.path import basename, dirname, isdir
 
@@ -22,7 +21,7 @@ def _has_class_fixture(tcase):
 
 class TestDiscoverer(object):
 
-    def __init__(self, options, module_pattern=six.text_type('test*.py'),
+    def __init__(self, options, module_pattern='test*.py',
                        func_match=lambda f: fnmatchcase(f, 'test*'),
                        dir_exclude=None):
         self.options = options
@@ -121,7 +120,7 @@ class TestDiscoverer(object):
         """
         for f in find_files(dname, match=self.module_pattern,
                                    direxclude=self.dir_exclude):
-            if not basename(f).startswith(six.text_type('__init__.')):
+            if not basename(f).startswith('__init__.'):
                 for result in self._module_iter(f):
                     yield result
 
@@ -138,7 +137,7 @@ class TestDiscoverer(object):
             t.err_msg=traceback.format_exc()
             yield t
         else:
-            if basename(fname).startswith(six.text_type('__init__.')):
+            if basename(fname).startswith('__init__.'):
                 for result in self._dir_iter(dirname(fname)):
                     yield result
             else:

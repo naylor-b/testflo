@@ -157,8 +157,8 @@ Operating Systems and Python Versions
 -------------------------------------
 
 testflo is used to test OpenMDAO as part of its CI process,
-so we run it nearly every day on linux, Windows and OS X under
-python 2.7 and 3.6.
+so we run it nearly every day on linux, Windows and OS X. It requires
+python 3.5 or higher.
 
 
 You can install testflo directly from github using the following command:

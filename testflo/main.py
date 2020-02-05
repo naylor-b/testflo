@@ -26,7 +26,6 @@ from __future__ import print_function
 
 import os
 import sys
-import six
 import time
 import warnings
 import multiprocessing
@@ -149,7 +148,7 @@ skip_dirs=site-packages,
     if options.benchmark:
         options.num_procs = 1
         options.isolated = True
-        discoverer = TestDiscoverer(options, module_pattern=six.text_type('benchmark*.py'),
+        discoverer = TestDiscoverer(options, module_pattern='benchmark*.py',
                                     func_match=lambda f: fnmatchcase(f, 'benchmark*'),
                                     dir_exclude=dir_exclude)
         benchmark_file = open(options.benchmarkfile, 'a')
