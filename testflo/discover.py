@@ -96,6 +96,9 @@ class TestDiscoverer(object):
         and/or part of a TestCase with setUpClass/tearDownClass, then save it
         for later, else return it.
         """
+        if test.status is not None:
+            return test
+
         mod = import_module(test.modpath)
         if test.modpath in self._mod_fixture_groups:
             self._mod_fixture_groups[test.modpath].append(test)
