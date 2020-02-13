@@ -25,6 +25,7 @@ from testflo.cover import start_coverage, stop_coverage
 
 _store = {}
 
+
 def _get_parser():
     """Returns a parser to handle command line args."""
 
@@ -105,6 +106,9 @@ def _get_parser():
     parser.add_argument('--noreport', action='store_true', dest='noreport',
                         help="Don't create a test results file.")
 
+    parser.add_argument('--show_skipped', action='store_true', dest='show_skipped',
+                        help="Display a list of any skipped tests in the summary.")
+
     parser.add_argument('tests', metavar='test', nargs='*',
                         help='A test method, test case, module, or directory to run.')
 
@@ -119,6 +123,7 @@ def _get_parser():
                              ' works for tests running in a subprocess (MPI and isolated).')
 
     return parser
+
 
 def _get_testflo_subproc_args():
     """Gets the testflo args that should be used in subprocesses."""
@@ -147,6 +152,7 @@ def _get_testflo_subproc_args():
         i += 1
 
     return keep
+
 
 def _file_gen(dname, fmatch=bool, dmatch=None):
     """A generator returning files under the given directory, with optional
@@ -386,6 +392,7 @@ def get_memory_usage():
         except:
             return 0.
 
+
 def elapsed_str(elapsed):
     """return a string of the form hh:mm:sec"""
     hrs = int(elapsed/3600)
@@ -393,6 +400,7 @@ def elapsed_str(elapsed):
     mins = int(elapsed/60)
     elapsed -= (mins * 60)
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
+
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:
