@@ -20,6 +20,7 @@ from testflo.cover import start_coverage, stop_coverage
 
 _store = {}
 
+
 def _get_parser():
     """Returns a parser to handle command line args."""
 
@@ -93,6 +94,9 @@ def _get_parser():
 
     parser.add_argument('--noreport', action='store_true', dest='noreport',
                         help="Don't create a test results file.")
+
+    parser.add_argument('--show_skipped', action='store_true', dest='show_skipped',
+                        help="Display a list of any skipped tests in the summary.")
 
     parser.add_argument('tests', metavar='test', nargs='*',
                         help='A test method, test case, module, or directory to run.')
@@ -373,6 +377,7 @@ def get_memory_usage():
         except:
             return 0.
 
+
 def elapsed_str(elapsed):
     """return a string of the form hh:mm:sec"""
     hrs = int(elapsed/3600)
@@ -380,6 +385,7 @@ def elapsed_str(elapsed):
     mins = int(elapsed/60)
     elapsed -= (mins * 60)
     return "%02d:%02d:%.2f" % (hrs, mins, elapsed)
+
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 def ismethod(obj):
