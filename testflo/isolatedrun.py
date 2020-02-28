@@ -12,13 +12,16 @@ if __name__ == '__main__':
     from testflo.test import Test
     from testflo.cover import save_coverage
     from testflo.qman import get_client_queue
+    from testflo.options import get_options
 
     queue = get_client_queue()
     os.environ['TESTFLO_QUEUE'] = ''
 
+    options = get_options()
+
     try:
         try:
-            test = Test(sys.argv[1])
+            test = Test(sys.argv[1], options)
             test.nocapture = True # so we don't lose stdout
             test.run()
         except:
