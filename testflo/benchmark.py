@@ -23,8 +23,8 @@ class BenchmarkWriter(object):
             result.status,
             result.elapsed(),
             result.memory_usage,
-            result.load1m,
-            result.load5m,
-            result.load15m
+            result.load[0],
+            result.load[1],
+            result.load[2]
         ))
         stream.flush()

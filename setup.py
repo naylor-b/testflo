@@ -71,9 +71,18 @@ setup(name='testflo',
                                 takes longer than timeout. Only works for tests
                                 running in a subprocess (MPI and isolated).
       """,
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'License :: OSI Approved :: Apache Software License',
+          'Natural Language :: English',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: POSIX :: Linux',
+          'Operating System :: Microsoft :: Windows',
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: Implementation :: CPython',
+      ],
       license='Apache 2.0',
       install_requires=[
-        'six',
         'coverage<5.0'
       ],
       packages=['testflo'],

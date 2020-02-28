@@ -6,13 +6,11 @@ from __future__ import print_function
 import sys
 import os
 
-from six import advance_iterator
 from multiprocessing import Queue, Process
 
 from testflo.cover import save_coverage
 from testflo.test import Test
 from testflo.options import get_options
-from testflo.qman import get_client_queue
 
 
 def worker(test_queue, done_queue, subproc_queue, worker_id):
@@ -107,7 +105,7 @@ class ConcurrentTestRunner(TestRunner):
         numtests = 0
         try:
             for proc in self.procs:
-                self.task_queue.put(advance_iterator(it))
+                self.task_queue.put(next(it))
                 numtests += 1
         except StopIteration:
             pass
@@ -126,7 +124,7 @@ class ConcurrentTestRunner(TestRunner):
                     if stop:
                         break
                     numtests -= 1
-                    self.task_queue.put(advance_iterator(it))
+                    self.task_queue.put(next(it))
                     numtests += 1
             except StopIteration:
                 pass
