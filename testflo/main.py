@@ -48,16 +48,16 @@ options = get_options()
 
 
 def dryrun(input_iter):
-    """Iterator added to the pipeline when user only wants
-    a dry run, listing all of the discovered tests but not
-    actually running them.
+    """Iterator added to the pipeline when user only wants a dry run, listing specs for all of the
+    discovered tests but not actually running them.
     """
     for tests in input_iter:
         for test in tests:
             if test.status is None:
                 test.status = 'OK'
-            print(test)
+            print(test.spec)
             yield test
+
 
 def run_pipeline(source, pipe):
     """Run a pipeline of test iteration objects."""
