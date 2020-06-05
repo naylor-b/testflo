@@ -140,9 +140,14 @@ skip_dirs=site-packages,
         options.test_glob = ['test*']
 
     def func_matcher(funcname):
+        for pattern in options.excludes:
+            if fnmatchcase(funcname, pattern):
+                return False
+
         for pattern in options.test_glob:
             if fnmatchcase(funcname, pattern):
                 return True
+
         return False
 
     if options.benchmark:
