@@ -106,6 +106,9 @@ def _get_parser():
                         help='Pattern to use for test discovery. Multiple patterns are allowed.',
                         default=[])
 
+    parser.add_argument('--exclude', action='append', dest='excludes', metavar='GLOB', default=[],
+                        help="Pattern to exclude test functions. Multiple patterns are allowed.")
+
     parser.add_argument('--timeout', action='store', dest='timeout', type=float,
                         help='Timeout in seconds. Test will be terminated if it takes longer than timeout. Only'
                              ' works for tests running in a subprocess (MPI and isolated).')
