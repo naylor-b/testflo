@@ -159,7 +159,7 @@ class TestDiscoverer(object):
         tcname = ':'.join((fname, testcase.__name__))
         for name, method in getmembers(testcase, ismethod):
             if self.func_match(name):
-                yield Test('.'.join((tcname, method.__name__)), self.options)
+                yield Test('.'.join((tcname, name)), self.options)
 
     def _testspec_iter(self, testspec):
         """Returns an iterator of Test objects found in the
