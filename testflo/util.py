@@ -38,10 +38,10 @@ def _get_parser():
                              'the quicktests.in file.')
 
     parser.add_argument('-n', '--numprocs', type=int, action='store',
-                        dest='num_procs', metavar='NUM_PROCS',
-                        help='Number of processes to run. By default, this will '
-                             'use the number of CPUs available.  To force serial'
-                             ' execution, specify a value of 1.')
+                        dest='num_procs', metavar='NUM_TEST_PROCS',
+                        help='Number of concurrent test processes to run. By default, this will '
+                             'use the number of virtual processors available.  To force tests to '
+                             'run consecutively, specify a value of 1.')
     parser.add_argument('-o', '--outfile', action='store', dest='outfile',
                         metavar='FILE', default='testflo_report.out',
                         help='Name of test report file.  Default is testflo_report.out.')
