@@ -26,6 +26,8 @@ def _get_parser():
 
     parser = ArgumentParser()
     parser.usage = "testflo [options]"
+    parser.add_argument('--version', action='store_true', dest='version',
+                        help="Display the version number and exit.")
     parser.add_argument('-c', '--config', action='store', dest='cfg',
                         metavar='FILE',
                         help='Path of config file where preferences are specified.')
@@ -99,7 +101,8 @@ def _get_parser():
                         help="Display a list of any skipped tests in the summary.")
 
     parser.add_argument('tests', metavar='test', nargs='*',
-                        help='A test method, test case, module, or directory to run.')
+                        help='A test method, test case, module, or directory to run. If not '
+                             'supplied, the current working directory is assumed.')
 
     parser.add_argument('-m', '--match', '--testmatch', action='append', dest='test_glob',
                         metavar='GLOB',
