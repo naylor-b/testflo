@@ -32,6 +32,7 @@ import multiprocessing
 
 from fnmatch import fnmatch, fnmatchcase
 
+import testflo
 from testflo.runner import ConcurrentTestRunner
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
@@ -86,6 +87,11 @@ def main(args=None):
         args = sys.argv[1:]
 
     options = get_options(args)
+
+    if options.version:
+        print("testflo version %s" % testflo.__version__)
+        return 0
+
     nprocs = options.num_procs
 
     options.skip_dirs = []

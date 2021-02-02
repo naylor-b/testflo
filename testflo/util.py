@@ -26,6 +26,8 @@ def _get_parser():
 
     parser = ArgumentParser()
     parser.usage = "testflo [options]"
+    parser.add_argument('--version', action='store_true', dest='version',
+                        help="Display the version number and exit.")
     parser.add_argument('-c', '--config', action='store', dest='cfg',
                         metavar='FILE',
                         help='Path of config file where preferences are specified.')
@@ -99,7 +101,8 @@ def _get_parser():
                         help="Display a list of any skipped tests in the summary.")
 
     parser.add_argument('tests', metavar='test', nargs='*',
-                        help='A test method, test case, module, or directory to run.')
+                        help='A test method, test case, module, or directory to run. If not '
+                             'supplied, the current working directory is assumed.')
 
     parser.add_argument('-m', '--match', '--testmatch', action='append', dest='test_glob',
                         metavar='GLOB',
@@ -245,16 +248,29 @@ def find_files(start, match=None, exclude=None,
 def fpath2modpath(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
+
+    Returns
+    -------
+    str
+        module path
+    bool
+        True if file is part of a python package
     """
+    pkg = False
     if basename(fpath).startswith('__init__.'):
         pnames = []
+        pkg = True
     else:
         pnames = [splitext(basename(fpath))[0]]
+
     path = dirname(abspath(fpath))
+
     while isfile(join(path, '__init__.py')):
-            path, pname = split(path)
-            pnames.append(pname)
-    return '.'.join(pnames[::-1])
+        path, pname = split(path)
+        pnames.append(pname)
+        pkg = True
+
+    return '.'.join(pnames[::-1]), pkg
 
 
 def parent_dirs(fpath):
@@ -288,15 +304,31 @@ def find_module(name):
     return None
 
 
+_non_pkg_files = {}  # keep track of non-pkg files to detect and flag dups
+
+
 def get_module(fname):
     """Given a filename or module path name, return a tuple
     of the form (filename, module).
     """
 
     if fname.endswith('.py'):
-        modpath = fpath2modpath(fname)
+        modpath, inpkg = fpath2modpath(fname)
         if not modpath:
             raise RuntimeError("can't find module %s" % fname)
+
+        if not inpkg:
+            if modpath in _non_pkg_files:
+                old = _non_pkg_files[modpath]
+                if old != fname:
+                    raise RuntimeError("module '%s' was already imported earlier from file '%s' so "
+                                       "it can't be imported from file '%s'. To fix this problem, "
+                                       "either rename the file or add the file to a python package "
+                                       "so the resulting module path will be unique." %
+                                       (modpath, old, fname))
+            else:
+                _non_pkg_files[modpath] = fname
+
     else:
         modpath = fname
         fname = find_module(modpath)
