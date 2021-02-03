@@ -5,8 +5,6 @@ from testflo.util import elapsed_str
 
 _result_map = {
     ('FAIL', False): 'F',
-    (None, False): 'F',  # something unexpected
-    (None, True): 'F',  # something unexpected
     ('FAIL', True): 'X',  # expected failure
     ('SKIP', False): 'S',
     ('SKIP', True): 'S',
