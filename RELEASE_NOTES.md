@@ -1,4 +1,22 @@
 ***********************
+# testflo version 1.4.5
+Feb 3, 2021
+
+- add an argument to specify that any skipped tests should cause testflo to return a non-zero exit code
+
+***********************
+# testflo version 1.4.4
+Feb 3, 2021
+
+- made testflo work better with tests that aren't part of an installed package
+
+***********************
+# testflo version 1.4.3
+Feb 3, 2021
+
+- added a check for non-package test files with duplicate local names
+
+***********************
 # testflo version 1.4.2
 Jun 10, 2020
 
