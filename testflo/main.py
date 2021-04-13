@@ -60,7 +60,7 @@ def dryrun(input_iter):
             yield test
 
 
-def run_pipeline(source, pipe):
+def run_pipeline(source, pipe, disallow_skipped):
     """Run a pipeline of test iteration objects."""
 
     global _start_time
@@ -72,12 +72,21 @@ def run_pipeline(source, pipe):
     for i,p in enumerate(pipe):
         iters.append(p(iters[i]))
 
-    return_code = 0
-
+    n_failed = 0
+    n_skipped = 0
     # iterate over the last iter in the pipeline and we're done
     for result in iters[-1]:
         if result.status == 'FAIL' and not result.expected_fail:
-            return_code = 1
+            n_failed += 1
+        elif result.status == 'SKIP':
+            n_skipped += 1
+
+    if n_failed > 0:
+        return_code = 1
+    elif n_skipped > 1 and disallow_skipped:
+        return_code = 2
+    else:
+        return_code = 0
 
     return return_code
 
@@ -216,7 +225,7 @@ skip_dirs=site-packages,
         if options.save_fails:
             pipeline.append(FailFilter().get_iter)
 
-        retval = run_pipeline(tests, pipeline)
+        retval = run_pipeline(tests, pipeline, options.disallow_skipped)
 
         finalize_coverage(options)
 
