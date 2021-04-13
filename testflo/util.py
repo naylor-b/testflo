@@ -101,6 +101,9 @@ def _get_parser():
     parser.add_argument('--show_skipped', action='store_true', dest='show_skipped',
                         help="Display a list of any skipped tests in the summary.")
 
+    parser.add_argument('--disallow_skipped', action='store_true', dest='disallow_skipped',
+                        help="Return exit code 2 if no tests failed but some tests are skipped.")
+
     parser.add_argument('tests', metavar='test', nargs='*',
                         help='A test method, test case, module, or directory to run. If not '
                              'supplied, the current working directory is assumed.')
