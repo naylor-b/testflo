@@ -7,6 +7,7 @@ import sys
 import itertools
 import inspect
 import warnings
+import importlib
 from importlib import import_module
 
 from configparser import ConfigParser
@@ -248,18 +249,9 @@ def find_files(start, match=None, exclude=None,
 def fpath2modpath(fpath):
     """Given a module filename, return its full Python name including
     enclosing packages. (based on existence of ``__init__.py`` files)
-
-    Returns
-    -------
-    str
-        module path
-    bool
-        True if file is part of a python package
     """
-    pkg = False
     if basename(fpath).startswith('__init__.'):
         pnames = []
-        pkg = True
     else:
         pnames = [splitext(basename(fpath))[0]]
 
@@ -268,9 +260,8 @@ def fpath2modpath(fpath):
     while isfile(join(path, '__init__.py')):
         path, pname = split(path)
         pnames.append(pname)
-        pkg = True
 
-    return '.'.join(pnames[::-1]), pkg
+    return '.'.join(pnames[::-1])
 
 
 def parent_dirs(fpath):
@@ -289,55 +280,18 @@ def find_module(name):
     given module name, or None if it can't be found. The
     file must be an uncompiled Python (.py) file.
     """
-
-    nameparts = name.split('.')
-
-    endings = [join(*nameparts)]
-    endings.append(join(endings[0], '__init__.py'))
-    endings[0] += '.py'
-
-    for entry in sys.path:
-        for ending in endings:
-            f = join(entry, ending)
-            if isfile(f):
-                return f
-    return None
+    try:
+        info = importlib.util.find_spec(name)
+    except ImportError:
+        info = None
+    if info is not None:
+        return info.origin
 
 
-_non_pkg_files = {}  # keep track of non-pkg files to detect and flag dups
+_mod2file = {}  # keep track of non-pkg files to detect and flag dups
 
 
-def get_module(fname):
-    """Given a filename or module path name, return a tuple
-    of the form (filename, module).
-    """
-
-    if fname.endswith('.py'):
-        modpath, inpkg = fpath2modpath(fname)
-        if not modpath:
-            raise RuntimeError("can't find module %s" % fname)
-
-        if not inpkg:
-            if modpath in _non_pkg_files:
-                old = _non_pkg_files[modpath]
-                if old != fname:
-                    raise RuntimeError("module '%s' was already imported earlier from file '%s' so "
-                                       "it can't be imported from file '%s'. To fix this problem, "
-                                       "either rename the file or add the file to a python package "
-                                       "so the resulting module path will be unique." %
-                                       (modpath, old, fname))
-            else:
-                _non_pkg_files[modpath] = fname
-
-    else:
-        modpath = fname
-        fname = find_module(modpath)
-
-        if not fname:
-            raise ImportError("can't import %s" % modpath)
-
-    start_coverage()
-
+def try_import(fname, modpath):
     try:
         mod = import_module(modpath)
     except ImportError:
@@ -357,6 +311,48 @@ def get_module(fname):
             del sys.modules[modpath]
         finally:
             sys.path = oldpath
+
+    return mod
+
+
+def get_module(fname):
+    """Given a filename or module path name, return a tuple
+    of the form (filename, module).
+    """
+
+    if fname.endswith('.py'):
+        modpath = fpath2modpath(fname)
+        if not modpath:
+            raise RuntimeError("can't find module %s" % fname)
+
+        if modpath in _mod2file:
+            old = _mod2file[modpath]
+            if old != fname:
+                raise RuntimeError("module '%s' was already imported earlier from file '%s' so "
+                                    "it can't be imported from file '%s'. To fix this problem, "
+                                    "either rename the file or add the file to a python package "
+                                    "so the resulting module path will be unique." %
+                                    (modpath, old, fname))
+        else:
+            _mod2file[modpath] = fname
+
+    else:
+        modpath = fname
+        fname = find_module(modpath)
+
+        if fname:
+            _mod2file[modpath] = fname
+        else:
+            # check for a non-pkg module
+            if modpath in _mod2file:
+                fname = _mod2file[modpath]
+            else:
+                raise ImportError("can't import %s" % modpath)
+
+    start_coverage()
+
+    try:
+        mod = try_import(fname, modpath)
     finally:
         stop_coverage()
 

@@ -8,6 +8,7 @@ from inspect import isclass
 import subprocess
 from tempfile import mkstemp
 from importlib import import_module
+from contextlib import contextmanager
 
 from types import FunctionType, ModuleType
 from io import StringIO
@@ -51,22 +52,21 @@ class FakeComm(object):
 _testing_path = ['.'] + sys.path
 
 
-class TestContext(object):
-    """Supports using the 'with' statement in place of try-finally to
-    set sys.path for a test.
-    """
+@contextmanager
+def testcontext(test):
+    global _testing_path
+    old_sys_path = sys.path
 
-    def __init__(self, test):
-        self.test = test
-        self.old_sys_path = sys.path
+    _testing_path[0] = test.test_dir
+    sys.path = _testing_path
 
-    def __enter__(self):
-        global _testing_path
-        _testing_path[0] = self.test.test_dir
-        sys.path = _testing_path
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.path = self.old_sys_path
+    try:
+        yield
+    except Exception:
+        test.status = 'FAIL'
+        test.err_msg = traceback.format_exc()
+    finally:
+        sys.path = old_sys_path
 
 
 class Test(object):
@@ -111,7 +111,7 @@ class Test(object):
         """Get the test's module, testcase (if any), function name,
         N_PROCS (for mpi tests) and ISOLATED and set our attributes.
         """
-        with TestContext(self):
+        with testcontext(self):
             try:
                 mod, self.tcasename, self.funcname = _parse_test_path(self.spec)
                 self.modpath = mod.__name__
@@ -233,8 +233,8 @@ class Test(object):
         elif self.options.isolated:
             return self._run_isolated(queue)
 
-        with TestContext(self):
-            mod = import_module(self.modpath)
+        with testcontext(self):
+            _, mod = get_module(self.spec.split(':',1)[0])
 
             testcase = getattr(mod, self.tcasename) if self.tcasename is not None else None
             funcname, nprocs = (self.funcname, self.nprocs)
