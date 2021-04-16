@@ -78,7 +78,7 @@ class Test(object):
     def __init__(self, testspec, options):
         self.spec = testspec
         self.options = options
-        self.test_dir = os.path.dirname(testspec.split(':',1)[0])
+        self.test_dir = os.path.dirname(testspec.rsplit(':',1)[0])
 
         self.status = None
         self.err_msg = ''
@@ -234,7 +234,7 @@ class Test(object):
             return self._run_isolated(queue)
 
         with testcontext(self):
-            _, mod = get_module(self.spec.split(':',1)[0])
+            _, mod = get_module(self.spec.rsplit(':',1)[0])
 
             testcase = getattr(mod, self.tcasename) if self.tcasename is not None else None
             funcname, nprocs = (self.funcname, self.nprocs)
@@ -353,7 +353,7 @@ class Test(object):
         """Returns the testspec with only the file's basename instead
         of its full path.
         """
-        parts = self.spec.split(':', 1)
+        parts = self.spec.rsplit(':', 1)
         fname = os.path.basename(parts[0])
         return ':'.join((fname, parts[-1]))
 
