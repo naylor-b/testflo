@@ -122,6 +122,7 @@ def _get_parser():
 
     return parser
 
+
 def _options2args():
     """Gets the testflo args that should be used in subprocesses."""
 
@@ -276,6 +277,23 @@ def parent_dirs(fpath):
     for i in range(2, len(parts)):
         pdirs.append(os.path.sep.join(parts[:i]))
     return pdirs[::-1]
+
+
+def get_testpath(testspec):
+    """Return the path to the test module separated from
+    the rest of the test spec.
+    """
+    testspec = testspec.strip()
+    parts = testspec.split(':')
+    if len(parts) > 1 and parts[1].startswith('\\'):  # windows abs path
+        path = ':'.join(parts[:2])
+        if len(parts) == 3:
+            rest = parts[2]
+        else:
+            rest = ''
+    else:
+        path, _, rest = testspec.partition(':')
+    return path, rest
 
 
 def find_module(name):
