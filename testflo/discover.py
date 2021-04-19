@@ -6,7 +6,7 @@ from unittest import TestCase
 
 from os.path import basename, dirname, isdir
 
-from testflo.util import find_files, get_module, ismethod
+from testflo.util import find_files, get_module, get_testpath, ismethod
 from testflo.test import Test
 
 def _has_class_fixture(tcase):
@@ -174,7 +174,7 @@ class TestDiscoverer(object):
         file system path to the .py file.
         """
 
-        module, _, rest = testspec.partition(':')
+        module, rest = get_testpath(testspec)
         if rest:
             tcasename, _, method = rest.partition('.')
             if method:

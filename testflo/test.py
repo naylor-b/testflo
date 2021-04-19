@@ -19,7 +19,7 @@ from unittest.case import _UnexpectedSuccess
 from testflo.cover import start_coverage, stop_coverage
 
 from testflo.util import get_module, ismethod, get_memory_usage, \
-                         _options2args
+                         get_testpath, _options2args
 from testflo.devnull import DevNull
 
 
@@ -78,7 +78,9 @@ class Test(object):
     def __init__(self, testspec, options):
         self.spec = testspec
         self.options = options
-        self.test_dir = os.path.dirname(testspec.rsplit(':',1)[0])
+
+        testpath, rest = get_testpath(testspec)
+        self.test_dir = os.path.dirname(testpath)
 
         self.status = None
         self.err_msg = ''
@@ -234,7 +236,8 @@ class Test(object):
             return self._run_isolated(queue)
 
         with testcontext(self):
-            _, mod = get_module(self.spec.rsplit(':',1)[0])
+            testpath, _ = get_testpath(self.spec)
+            _, mod = get_module(testpath)
 
             testcase = getattr(mod, self.tcasename) if self.tcasename is not None else None
             funcname, nprocs = (self.funcname, self.nprocs)
@@ -353,9 +356,9 @@ class Test(object):
         """Returns the testspec with only the file's basename instead
         of its full path.
         """
-        parts = self.spec.rsplit(':', 1)
-        fname = os.path.basename(parts[0])
-        return ':'.join((fname, parts[-1]))
+        testpath, rest = get_testpath(self.spec)
+        fname = os.path.basename(testpath)
+        return ':'.join((fname, rest))
 
     def __str__(self):
         if self.err_msg:
@@ -378,27 +381,16 @@ def _parse_test_path(testspec):
     file system path to the .py file.  A value of None in the tuple
     indicates that that part of the testspec was not present.
     """
+    testpath, rest = get_testpath(testspec)
+    _, mod = get_module(testpath)
 
-    testcase = funcname = tcasename = None
-    testspec = testspec.strip()
-    parts = testspec.split(':')
-    if len(parts) > 1 and parts[1].startswith('\\'):  # windows abs path
-        module = ':'.join(parts[:2])
-        if len(parts) == 3:
-            rest = parts[2]
-        else:
-            rest = ''
-    else:
-        module, _, rest = testspec.partition(':')
-
-    _, mod = get_module(module)
+    funcname = tcasename = None
 
     if rest:
         objname, _, funcname = rest.partition('.')
         obj = getattr(mod, objname)
         if isclass(obj) and issubclass(obj, TestCase):
             tcasename = objname
-            testcase = obj
             if funcname:
                 meth = getattr(obj, funcname)
                 if not ismethod(meth):
@@ -429,7 +421,7 @@ def _try_call(func):
     except _UnexpectedSuccess:
         status = 'OK'
         expected = True
-    except Exception as err:
+    except Exception:
         status = 'FAIL'
         sys.stderr.write(traceback.format_exc())
 
