@@ -1,4 +1,10 @@
 ***********************
+# testflo version 1.4.5.1
+April 13, 2021
+
+-  fixes places in the code that weren't properly handling Windows file paths that included a colon.
+
+***********************
 # testflo version 1.4.5
 April 13, 2021
 
