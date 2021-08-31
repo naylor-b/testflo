@@ -225,13 +225,14 @@ class Test(object):
             return self
 
         MPI = None
-        if queue is not None and self.nprocs > 0 and not self.options.nompi:
+        if self.nprocs > 0 and not self.options.nompi:
             try:
                 from mpi4py import MPI
             except ImportError:
                 pass
             else:
-                return self._run_mpi(queue)
+                if queue is not None:
+                    return self._run_mpi(queue)
         elif self.options.isolated:
             return self._run_isolated(queue)
 
