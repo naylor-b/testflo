@@ -1,4 +1,10 @@
 ***********************
+# testflo version 1.4.6
+October 13, 2021
+
+-  fix for bad testcase comm [#55](https://github.com/OpenMDAO/testflo/pull/55)
+
+***********************
 # testflo version 1.4.5.1
 April 13, 2021
 
