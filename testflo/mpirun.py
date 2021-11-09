@@ -10,6 +10,8 @@ if __name__ == '__main__':
     import os
     import traceback
 
+    os.environ['OPENMDAO_USE_MPI'] = '1'
+
     from mpi4py import MPI
     from testflo.test import Test
     from testflo.cover import setup_coverage, save_coverage
