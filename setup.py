@@ -3,7 +3,7 @@ from setuptools import setup
 import re
 
 __version__ = re.findall(
-    r"""__version__ = ["']+([0-9\.]*)["']+""",
+    r"""__version__ = ["']+([0-9\.\-dev]*)["']+""",
     open('testflo/__init__.py').read(),
 )[0]
 
