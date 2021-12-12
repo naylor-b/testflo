@@ -1,14 +1,23 @@
+# RELEASE NOTES
+
+***********************
+# testflo version 1.4.7
+October 13, 2021
+
+- setting N_PROCS=1 will now run under MPI in OpenMDAO [#60](https://github.com/OpenMDAO/testflo/pull/60)
+- fixed version regex (old one couldn't handle *-dev versions [#59](https://github.com/OpenMDAO/testflo/pull/59)
+
 ***********************
 # testflo version 1.4.6
 October 13, 2021
 
--  fix for bad testcase comm [#55](https://github.com/OpenMDAO/testflo/pull/55)
+- fix for bad testcase comm [#55](https://github.com/OpenMDAO/testflo/pull/55)
 
 ***********************
 # testflo version 1.4.5.1
 April 13, 2021
 
--  fixes places in the code that weren't properly handling Windows file paths that included a colon.
+- fixes places in the code that weren't properly handling Windows file paths that included a colon.
 
 ***********************
 # testflo version 1.4.5
@@ -36,7 +45,7 @@ Jun 10, 2020
   - issue happened when a test function has a decorator that doesn't rename the wrapped function to match the parent TestCase attribute
 - added `--excludes` option to add glob patterns to exclude test functions
 - fixed dryrun output to include only test specs
-   - This change now allows you to pipe the output from `--dryrun` into a file you can later run using `-t`, making it easier to assemble custom lists of tests to run.
+  - This change now allows you to pipe the output from `--dryrun` into a file you can later run using `-t`, making it easier to assemble custom lists of tests to run.
 - declare support for more Python versions
 
 ***********************
