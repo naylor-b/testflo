@@ -6,6 +6,13 @@ to run an MPI test.
 """
 
 if __name__ == '__main__':
+    try:
+        import coverage
+    except ImportError:
+        pass
+    else:
+        coverage.process_startup()
+
     import sys
     import os
     import traceback

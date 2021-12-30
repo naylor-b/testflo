@@ -1,30 +1,65 @@
 """
 Methods to provide code coverage using coverage.py.
 """
+try:
+    import coverage
+except ImportError:
+    coverage = None
+else:
+    coverage.process_startup()
+
 
 import os
+import shutil
 import sys
 import webbrowser
 
-try:
-    from coverage import coverage
-except ImportError:
-    coverage = None
+_covrc_template = """
+[run]
+branch = False
+parallel = True
+concurrency = multiprocessing
+source_pkgs = %s
+omit = %s
 
+
+[report]
+ignore_errors = True
+skip_empty = True
+omit = %s
+
+
+[html]
+skip_empty = True
+"""
 
 # use to hold a global coverage obj
 _coverobj = None
 
+def _to_ini(lst):
+    return ','.join(lst)
+
+
 def setup_coverage(options):
     global _coverobj
     if _coverobj is None and (options.coverage or options.coveragehtml):
+        # os.environ['COVERAGE_DEBUG_FILE'] = 'cov.debug'
+        # os.environ['COVERAGE_DEBUG'] = ''
+        os.environ['COVERAGE_RUN'] = 'true'
+        os.environ['COVERAGE_RCFILE'] = rcfile = os.path.join(os.getcwd(), '_coveragerc_')
+        os.environ['COVERAGE_FILE'] = covfile = os.path.join(os.getcwd(), '.coverage')
+        os.environ['COVERAGE_PROCESS_START'] = rcfile
         if not coverage:
             raise RuntimeError("coverage has not been installed.")
         if not options.coverpkgs:
             raise RuntimeError("No packages specified for coverage. "
                                "Use the --coverpkg option to add a package.")
-        _coverobj = coverage(data_suffix=True, source=options.coverpkgs,
-                             omit=options.cover_omits)
+        with open(rcfile, 'w') as f:
+            content = _covrc_template % (_to_ini(options.coverpkgs), _to_ini(options.cover_omits),
+                                         _to_ini(options.cover_omits))
+            print(content)
+            f.write(content)
+        _coverobj = coverage.Coverage(data_file=covfile, data_suffix=True, config_file=rcfile)
     return _coverobj
 
 def start_coverage():
@@ -66,10 +101,6 @@ def finalize_coverage(options):
 
             _coverobj.combine()
 
-            # write combined data to default filename (as used by coveralls)
-            # (NOTE: get_data() returns None, so using data attribute)
-            _coverobj.data.write_file('.coverage')
-
             if options.coverage:
                 _coverobj.report(morfs=morfs)
             else:
@@ -81,3 +112,8 @@ def finalize_coverage(options):
                     os.system('open %s' % outfile)
                 else:
                     webbrowser.get().open(outfile)
+
+            fname = _coverobj.get_data().data_filename()
+            covfile = os.environ['COVERAGE_FILE']
+            if fname != covfile:
+                os.rename(fname, covfile)

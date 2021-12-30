@@ -3,7 +3,7 @@ from setuptools import setup
 import re
 
 __version__ = re.findall(
-    r"""__version__ = ["']+([0-9\.]*)["']+""",
+    r"""__version__ = ["']+([0-9\.\-dev]*)["']+""",
     open('testflo/__init__.py').read(),
 )[0]
 
@@ -86,7 +86,7 @@ setup(name='testflo',
       ],
       license='Apache 2.0',
       install_requires=[
-        'coverage<5.0'
+        'coverage>=6.2'
       ],
       packages=['testflo'],
       entry_points="""
