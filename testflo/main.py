@@ -29,6 +29,8 @@ import sys
 import time
 import warnings
 import multiprocessing
+import atexit
+import shutil
 
 from fnmatch import fnmatch, fnmatchcase
 
@@ -41,7 +43,6 @@ from testflo.discover import TestDiscoverer
 from testflo.filters import TimeFilter, FailFilter
 
 from testflo.util import read_config_file, read_test_file
-from testflo.cover import setup_coverage, finalize_coverage
 from testflo.options import get_options
 from testflo.qman import get_server_queue
 
@@ -144,7 +145,15 @@ skip_dirs=site-packages,
                 return True
         return False
 
-    setup_coverage(options)
+    if options.coverage or options.coveragehtml:
+        os.environ['TESTFLO_MAIN_PID'] = str(os.getpid())
+        def _rmcovdir():
+            if os.getpid() == int(os.environ.get('TESTFLO_MAIN_PID', '0')):
+                if os.path.isdir('_covdir'):
+                    shutil.rmtree('_covdir')
+        atexit.register(_rmcovdir)
+        from testflo.cover import setup_coverage, finalize_coverage
+        setup_coverage(options)
 
     if options.noreport:
         report_file = open(os.devnull, 'a')
