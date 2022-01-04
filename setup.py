@@ -86,7 +86,7 @@ setup(name='testflo',
       ],
       license='Apache 2.0',
       install_requires=[
-        'coverage>=6.2'
+        'coverage>=6.0'
       ],
       packages=['testflo'],
       entry_points="""
