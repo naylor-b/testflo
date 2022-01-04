@@ -17,6 +17,9 @@ if __name__ == '__main__':
     import os
     import traceback
 
+    # when testing OpenMDAO, make sure that MPI is active
+    os.environ['OPENMDAO_USE_MPI'] = '1'
+
     from mpi4py import MPI
     from testflo.test import Test
     from testflo.qman import get_client_queue

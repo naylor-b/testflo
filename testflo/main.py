@@ -147,12 +147,19 @@ skip_dirs=site-packages,
 
     if options.coverage or options.coveragehtml:
         os.environ['TESTFLO_MAIN_PID'] = str(os.getpid())
-        def _rmcovdir():
+        # some coverage files aren't written until atexit of their processes, so put our finalize
+        # routine in atexit before their Coverage._atexit methods are registered so ours will be
+        # executed *after* theirs.
+        def _finalize():
             if os.getpid() == int(os.environ.get('TESTFLO_MAIN_PID', '0')):
+                from testflo.cover import finalize_coverage
+                finalize_coverage(options)
+                # clean up the temporary dir where we store the interim coverage files from all
+                # of the processes.
                 if os.path.isdir('_covdir'):
                     shutil.rmtree('_covdir')
-        atexit.register(_rmcovdir)
-        from testflo.cover import setup_coverage, finalize_coverage
+        atexit.register(_finalize)
+        from testflo.cover import setup_coverage
         setup_coverage(options)
 
     if options.noreport:
@@ -234,8 +241,6 @@ skip_dirs=site-packages,
             pipeline.append(FailFilter().get_iter)
 
         retval = run_pipeline(tests, pipeline, options.disallow_skipped)
-
-        finalize_coverage(options)
 
         if manager is not None:
             manager.shutdown()
