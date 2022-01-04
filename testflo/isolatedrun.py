@@ -17,7 +17,6 @@ if __name__ == '__main__':
     import traceback
 
     from testflo.test import Test
-    from testflo.cover import save_coverage
     from testflo.qman import get_client_queue
     from testflo.options import get_options
 
@@ -35,8 +34,6 @@ if __name__ == '__main__':
             print(traceback.format_exc())
             test.status = 'FAIL'
             test.err_msg = traceback.format_exc()
-
-        save_coverage()
 
     except:
         test.err_msg = traceback.format_exc()

@@ -1,18 +1,17 @@
 """
 Methods to provide code coverage using coverage.py.
 """
+import os
+import sys
+import shutil
+import webbrowser
+
 try:
     import coverage
 except ImportError:
     coverage = None
 else:
     coverage.process_startup()
-
-
-import os
-import shutil
-import sys
-import webbrowser
 
 _covrc_template = """
 [run]
@@ -43,11 +42,16 @@ def _to_ini(lst):
 def setup_coverage(options):
     global _coverobj
     if _coverobj is None and (options.coverage or options.coveragehtml):
-        # os.environ['COVERAGE_DEBUG_FILE'] = 'cov.debug'
-        # os.environ['COVERAGE_DEBUG'] = ''
+        oldcov = os.path.join(os.getcwd(), '.coverage')
+        if os.path.isfile(oldcov):
+            os.remove(oldcov)
+        covdir = os.path.join(os.getcwd(), '_covdir')
+        if os.path.isdir('_covdir'):
+            shutil.rmtree('_covdir')
+        os.mkdir('_covdir')
         os.environ['COVERAGE_RUN'] = 'true'
-        os.environ['COVERAGE_RCFILE'] = rcfile = os.path.join(os.getcwd(), '_coveragerc_')
-        os.environ['COVERAGE_FILE'] = covfile = os.path.join(os.getcwd(), '.coverage')
+        os.environ['COVERAGE_RCFILE'] = rcfile = os.path.join(covdir, '_coveragerc_')
+        os.environ['COVERAGE_FILE'] = covfile = os.path.join(covdir, '.coverage')
         os.environ['COVERAGE_PROCESS_START'] = rcfile
         if not coverage:
             raise RuntimeError("coverage has not been installed.")
@@ -57,7 +61,6 @@ def setup_coverage(options):
         with open(rcfile, 'w') as f:
             content = _covrc_template % (_to_ini(options.coverpkgs), _to_ini(options.cover_omits),
                                          _to_ini(options.cover_omits))
-            print(content)
             f.write(content)
         _coverobj = coverage.Coverage(data_file=covfile, data_suffix=True, config_file=rcfile)
     return _coverobj
@@ -100,6 +103,7 @@ def finalize_coverage(options):
             morfs = list(find_files(dirs, match='*.py', exclude=excl))
 
             _coverobj.combine()
+            _coverobj.save()
 
             if options.coverage:
                 _coverobj.report(morfs=morfs)
@@ -113,7 +117,5 @@ def finalize_coverage(options):
                 else:
                     webbrowser.get().open(outfile)
 
-            fname = _coverobj.get_data().data_filename()
-            covfile = os.environ['COVERAGE_FILE']
-            if fname != covfile:
-                os.rename(fname, covfile)
+            shutil.copy(_coverobj.get_data().data_filename(),
+                        os.path.join(os.getcwd(), '.coverage'))

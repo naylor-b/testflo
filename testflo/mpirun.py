@@ -19,7 +19,6 @@ if __name__ == '__main__':
 
     from mpi4py import MPI
     from testflo.test import Test
-    from testflo.cover import setup_coverage, save_coverage
     from testflo.qman import get_client_queue
     from testflo.options import get_options
 
@@ -30,7 +29,6 @@ if __name__ == '__main__':
     os.environ['TESTFLO_QUEUE'] = ''
 
     options = get_options()
-    setup_coverage(options)
 
     try:
         try:
@@ -42,25 +40,23 @@ if __name__ == '__main__':
             print(traceback.format_exc())
             test.status = 'FAIL'
             test.err_msg = traceback.format_exc()
+        else:
+            # collect results
+            results = comm.gather(test, root=0)
+            if comm.rank == 0:
+                if not all([isinstance(r, Test) for r in results]):
+                    print("\nNot all results gathered are Test objects.  "
+                          "You may have out-of-sync collective MPI calls.\n")
+                total_mem_usage = sum(r.memory_usage for r in results if isinstance(r, Test))
+                test.memory_usage = total_mem_usage
 
-        # collect results
-        results = comm.gather(test, root=0)
-        if comm.rank == 0:
-            if not all([isinstance(r, Test) for r in results]):
-                print("\nNot all results gathered are Test objects.  "
-                      "You may have out-of-sync collective MPI calls.\n")
-            total_mem_usage = sum(r.memory_usage for r in results if isinstance(r, Test))
-            test.memory_usage = total_mem_usage
-
-            # check for errors and record error message
-            for r in results:
-                if test.status != 'FAIL' and r.status in ('SKIP', 'FAIL'):
-                    test.err_msg = r.err_msg
-                    test.status = r.status
-                    if r.status == 'FAIL':
-                        break
-
-        save_coverage()
+                # check for errors and record error message
+                for r in results:
+                    if test.status != 'FAIL' and r.status in ('SKIP', 'FAIL'):
+                        test.err_msg = r.err_msg
+                        test.status = r.status
+                        if r.status == 'FAIL':
+                            break
 
     except Exception:
         test.err_msg = traceback.format_exc()
