@@ -8,35 +8,64 @@ import webbrowser
 
 try:
     import coverage
+    from coverage.config import HandyConfigParser
 except ImportError:
     coverage = None
 else:
     coverage.process_startup()
 
-_covrc_template = """
-[run]
-branch = False
-parallel = True
-concurrency = multiprocessing
-source_pkgs = %s
-omit = %s
-
-
-[report]
-ignore_errors = True
-skip_empty = True
-omit = %s
-
-
-[html]
-skip_empty = True
-"""
 
 # use to hold a global coverage obj
 _coverobj = None
 
 def _to_ini(lst):
-    return ','.join(lst)
+    if lst:
+        return ','.join(lst)
+    return ''
+
+
+def _write_temp_config(options, rcfile):
+    """
+    Read any .coveragerc file if it exists, and override parts of it then generate our temp config.
+
+    Parameters
+    ----------
+    options : cmd line options
+        Options from the command line parser.
+    rcfile : str
+        The name of our temporary coverage config file.
+    """
+    tmp_cfg = {
+        'run': {
+            'branch': False,
+            'parallel': True,
+            'concurrency': 'multiprocessing',
+        },
+        'report': {
+            'ignore_errors': True,
+            'skip_empty': True,
+        },
+        'html': {
+            'skip_empty': True,
+        }
+    }
+
+    if options.coverpkgs:
+        tmp_cfg['run']['source_pkgs'] = _to_ini(options.coverpkgs)
+
+    if options.cover_omits:
+        tmp_cfg['run']['omit'] = _to_ini(options.cover_omits)
+        tmp_cfg['report']['omit'] = _to_ini(options.cover_omits)
+
+    cfgparser = HandyConfigParser(our_file=True)
+
+    if os.path.isfile('.coveragerc'):
+        cfgparser.read(['.coveragerc'])
+
+    cfgparser.read_dict(tmp_cfg)
+
+    with open(rcfile, 'w') as f:
+        cfgparser.write(f)
 
 
 def setup_coverage(options):
@@ -58,10 +87,7 @@ def setup_coverage(options):
         if not options.coverpkgs:
             raise RuntimeError("No packages specified for coverage. "
                                "Use the --coverpkg option to add a package.")
-        with open(rcfile, 'w') as f:
-            content = _covrc_template % (_to_ini(options.coverpkgs), _to_ini(options.cover_omits),
-                                         _to_ini(options.cover_omits))
-            f.write(content)
+        _write_temp_config(options, rcfile)
         _coverobj = coverage.Coverage(data_file=covfile, data_suffix=True, config_file=rcfile)
     return _coverobj
 
