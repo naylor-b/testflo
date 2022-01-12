@@ -145,6 +145,9 @@ skip_dirs=site-packages,
                 return True
         return False
 
+    # set this so code will know when it's running under testflo
+    os.environ['TESTFLO_RUNNING'] = '1'
+
     if options.coverage or options.coveragehtml:
         os.environ['TESTFLO_MAIN_PID'] = str(os.getpid())
         # some coverage files aren't written until atexit of their processes, so put our finalize
