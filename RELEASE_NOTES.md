@@ -1,6 +1,12 @@
 # RELEASE NOTES
 
 ***********************
+# testflo version 1.4.8
+February 14, 2022
+
+- added env var to tell other code when it's running under testflo [#64](https://github.com/OpenMDAO/testflo/pull/64)
+
+***********************
 # testflo version 1.4.7
 October 13, 2021
 
