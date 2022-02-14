@@ -144,6 +144,9 @@ skip_dirs=site-packages,
                 return True
         return False
 
+    # set this so code will know when it's running under testflo
+    os.environ['TESTFLO_RUNNING'] = '1'
+
     setup_coverage(options)
 
     if options.noreport:
