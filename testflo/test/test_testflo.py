@@ -7,6 +7,10 @@ class TestfloTestCase(unittest.TestCase):
     def test_ok(self):
         pass
 
+    def test_env_var(self):
+        testflo_running = os.getenv("TESTFLO_RUNNING", default=False)
+        self.assertNotEqual(testflo_running, False)
+
     def test_fail(self):
         self.fail("failure 1")
 
