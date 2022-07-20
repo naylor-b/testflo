@@ -95,6 +95,14 @@ def _get_parser():
                         metavar='FILE', default='benchmark_data.csv',
                         help='Name of benchmark data file.  Default is benchmark_data.csv.')
 
+    parser.add_argument('--durations', action='store', type=int, dest='durations', default=0,
+                        metavar='NUM',
+                        help="Display 'NUM' tests with longest durations.")
+
+    parser.add_argument('--durations-min', action='store', type=float, dest='durations_min',
+                        default=0.005, metavar='MIN_TIME',
+                        help='Specify the minimum duration test to include in the durations list.')
+
     parser.add_argument('--noreport', action='store_true', dest='noreport',
                         help="Don't create a test results file.")
 
@@ -116,9 +124,10 @@ def _get_parser():
     parser.add_argument('--exclude', action='append', dest='excludes', metavar='GLOB', default=[],
                         help="Pattern to exclude test functions. Multiple patterns are allowed.")
 
-    parser.add_argument('--timeout', action='store', dest='timeout', type=float,
-                        help='Timeout in seconds. Test will be terminated if it takes longer than timeout. Only'
-                             ' works for tests running in a subprocess (MPI and isolated).')
+    parser.add_argument('--timeout', action='store', dest='timeout', type=float, metavar='TIME_LIMIT',
+                        help="Timeout in seconds. A test will be terminated if it takes longer than "
+                             "'TIME_LIMIT'. Only works for tests running in a subprocess "
+                             "(MPI or isolated).")
 
     return parser
 
