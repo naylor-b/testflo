@@ -24,10 +24,9 @@ class DurationSummary(object):
         else:
             title = " Max duration tests "
 
-        prefix = "\n\n" + "=" * 30 + title + "=" * 30 + "\n\n"
-        suffix = "\n" + "=" * len(prefix) + "\n"
+        eqs = "=" * 16
 
-        write(prefix)
+        write("\n\n{}{}{}\n\n".format(eqs, title, eqs))
         count = self.options.durations
 
         for spec, duration in sorted(durations, key=lambda t: t[1], reverse=True):
@@ -43,4 +42,4 @@ class DurationSummary(object):
             if count <= 0:
                 break
 
-        write(suffix)
+        write("\n" + "=" * (len(title) + 2 * len(eqs)) + "\n")

@@ -41,7 +41,7 @@ from testflo.duration import DurationSummary
 from testflo.discover import TestDiscoverer
 from testflo.filters import TimeFilter, FailFilter
 
-from testflo.util import read_config_file, read_test_file
+from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.options import get_options
 from testflo.qman import get_server_queue
@@ -116,6 +116,7 @@ def main(args=None):
 skip_dirs=site-packages,
     dist-packages,
     build,
+    _build,
     contrib
 """)
     read_config_file(rcfile, options)
@@ -140,8 +141,9 @@ skip_dirs=site-packages,
         tests = [os.getcwd()]
 
     def dir_exclude(d):
+        base = os.path.basename(d)
         for skip in options.skip_dirs:
-            if fnmatch(os.path.basename(d), skip):
+            if fnmatch(base, skip):
                 return True
         return False
 

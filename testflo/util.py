@@ -6,8 +6,8 @@ import os
 import sys
 import itertools
 import inspect
-import warnings
 import importlib
+import warnings
 from importlib import import_module
 
 from configparser import ConfigParser
@@ -15,7 +15,7 @@ from configparser import ConfigParser
 from fnmatch import fnmatch
 from os.path import join, dirname, basename, isfile,  abspath, split, splitext
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, _AppendAction
 
 from testflo.cover import start_coverage, stop_coverage
 
@@ -123,6 +123,10 @@ def _get_parser():
 
     parser.add_argument('--exclude', action='append', dest='excludes', metavar='GLOB', default=[],
                         help="Pattern to exclude test functions. Multiple patterns are allowed.")
+
+    parser.add_argument('--skip_dir', action='append', dest='skip_dirs', metavar='GLOB', default=[],
+                        help="Pattern to skip directories. Multiple patterns are allowed. Patterns "
+                        "are applied only to local dir names, not full paths.")
 
     parser.add_argument('--timeout', action='store', dest='timeout', type=float, metavar='TIME_LIMIT',
                         help="Timeout in seconds. A test will be terminated if it takes longer than "
@@ -402,19 +406,43 @@ def read_test_file(testfile):
                 yield line
 
 
+_parser_types = None
+
+
+def _get_parser_action_map():
+    global _parser_types
+
+    if _parser_types is None:
+        _parser_types = {}
+        p = _get_parser()
+        for action in p._actions:
+            _parser_types[action.dest] = action
+
+    return _parser_types
+
+
 def read_config_file(cfgfile, options):
     config = ConfigParser()
-    config.readfp(open(cfgfile))
+    config.read_file(open(cfgfile), source=cfgfile)
 
-    if config.has_option('testflo', 'skip_dirs'):
-        skips = config.get('testflo', 'skip_dirs')
-        options.skip_dirs = [s.strip() for s in skips.split(',') if s.strip()]
+    if 'testflo' in config:
+        parser_map = _get_parser_action_map()
 
-    if config.has_option('testflo', 'num_procs'):
-        options.num_procs = int(config.get('testflo', 'num_procs'))
+        for name, optstr in config['testflo'].items():
+            if name not in parser_map:
+                warnings.warn("Unknown option '{}' in testflo config file '{}'.".format(name,
+                                                                                        cfgfile))
+                continue
 
-    if config.has_option('testflo', 'noreport'):
-        options.noreport = bool(config.get('testflo', 'noreport'))
+            action = parser_map[name]
+            typ = action.type
+            if typ is None:
+                typ = lambda x: x
+
+            if isinstance(action, _AppendAction):
+                setattr(options, name, [typ(s.strip()) for s in optstr.split(',') if s.strip()])
+            else:
+                setattr(options, name, typ(optstr))
 
 
 def get_memory_usage():
