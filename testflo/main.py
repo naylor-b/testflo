@@ -37,10 +37,11 @@ from testflo.runner import ConcurrentTestRunner
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
 from testflo.summary import ResultSummary
+from testflo.duration import DurationSummary
 from testflo.discover import TestDiscoverer
 from testflo.filters import TimeFilter, FailFilter
 
-from testflo.util import read_config_file, read_test_file
+from testflo.util import read_config_file, read_test_file, _get_parser
 from testflo.cover import setup_coverage, finalize_coverage
 from testflo.options import get_options
 from testflo.qman import get_server_queue
@@ -115,6 +116,7 @@ def main(args=None):
 skip_dirs=site-packages,
     dist-packages,
     build,
+    _build,
     contrib
 """)
     read_config_file(rcfile, options)
@@ -139,8 +141,9 @@ skip_dirs=site-packages,
         tests = [os.getcwd()]
 
     def dir_exclude(d):
+        base = os.path.basename(d)
         for skip in options.skip_dirs:
-            if fnmatch(os.path.basename(d), skip):
+            if fnmatch(base, skip):
                 return True
         return False
 
@@ -206,6 +209,9 @@ skip_dirs=site-packages,
             if options.benchmark:
                 pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
 
+            if options.durations:
+                pipeline.append(DurationSummary(options).get_iter)
+
             if options.compact:
                 verbose = -1
             else:
@@ -217,6 +223,9 @@ skip_dirs=site-packages,
             ])
             if not options.noreport:
                 # print verbose results and summary to a report file
+                if options.durations:
+                    pipeline.append(DurationSummary(options, stream=report).get_iter)
+
                 pipeline.extend([
                     ResultPrinter(options, report, verbose=1).get_iter,
                     ResultSummary(options, stream=report).get_iter,
