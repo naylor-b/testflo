@@ -1,6 +1,12 @@
 # RELEASE NOTES
 
 ***********************
+# testflo version 1.4.9
+July 25, 2022
+
+- added --durations option that prints n longest running tests [#71](https://github.com/OpenMDAO/testflo/pull/71)
+
+***********************
 # testflo version 1.4.8
 February 14, 2022
 
