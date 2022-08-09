@@ -1,6 +1,15 @@
 # RELEASE NOTES
 
 ***********************
+# testflo version 1.4.9
+July 25, 2022
+
+- added --durations option and fixed some config file issues [#71](https://github.com/OpenMDAO/testflo/pull/71)
+  - added --durations option that prints the n longest running tests (similar to pytest)
+  - fixed the way the .testflo config file is processed so it should support setting any, or at least most of the command line options
+  - added the --skip_dirs command line option (skip_dirs could be defined in the config file but it wasn't a valid command line option)
+
+***********************
 # testflo version 1.4.8
 February 14, 2022
 
