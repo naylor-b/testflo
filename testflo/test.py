@@ -286,8 +286,6 @@ class Test(object):
                 sys.stdout = outstream
                 sys.stderr = errstream
 
-                start_coverage()
-
                 self.start_time = time.time()
 
                 # if there's a module setup, run it
@@ -343,8 +341,6 @@ class Test(object):
                     self.load = os.getloadavg()
 
             finally:
-                stop_coverage()
-
                 sys.stderr = old_err
                 sys.stdout = old_out
 

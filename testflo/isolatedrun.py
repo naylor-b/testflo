@@ -8,7 +8,7 @@ if __name__ == '__main__':
     try:
         import coverage
     except ImportError:
-        pass
+        coverage = None
     else:
         coverage.process_startup()
 

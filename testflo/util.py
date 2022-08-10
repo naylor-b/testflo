@@ -383,12 +383,7 @@ def get_module(fname):
             else:
                 raise ImportError("can't import %s" % modpath)
 
-    start_coverage()
-
-    try:
-        mod = try_import(fname, modpath)
-    finally:
-        stop_coverage()
+    mod = try_import(fname, modpath)
 
     return fname, mod
 

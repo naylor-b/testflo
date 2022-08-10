@@ -71,6 +71,11 @@ def _write_temp_config(options, rcfile):
 def setup_coverage(options):
     global _coverobj
     if _coverobj is None and (options.coverage or options.coveragehtml):
+        if not coverage:
+            raise RuntimeError("coverage has not been installed.")
+        if not options.coverpkgs:
+            raise RuntimeError("No packages specified for coverage. "
+                               "Use the --coverpkg option to add a package.")
         oldcov = os.path.join(os.getcwd(), '.coverage')
         if os.path.isfile(oldcov):
             os.remove(oldcov)
@@ -82,11 +87,6 @@ def setup_coverage(options):
         os.environ['COVERAGE_RCFILE'] = rcfile = os.path.join(covdir, '_coveragerc_')
         os.environ['COVERAGE_FILE'] = covfile = os.path.join(covdir, '.coverage')
         os.environ['COVERAGE_PROCESS_START'] = rcfile
-        if not coverage:
-            raise RuntimeError("coverage has not been installed.")
-        if not options.coverpkgs:
-            raise RuntimeError("No packages specified for coverage. "
-                               "Use the --coverpkg option to add a package.")
         _write_temp_config(options, rcfile)
         _coverobj = coverage.Coverage(data_file=covfile, data_suffix=True, config_file=rcfile)
     return _coverobj
