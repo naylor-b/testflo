@@ -44,6 +44,7 @@ def _write_temp_config(options, rcfile):
         'report': {
             'ignore_errors': True,
             'skip_empty': True,
+            'sort': '-cover',
         },
         'html': {
             'skip_empty': True,
