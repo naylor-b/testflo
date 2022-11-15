@@ -199,8 +199,10 @@ class Test(object):
             if mpirun_exe is None:
                 raise Exception("mpirun or mpiexec was not found in the system path.")
 
+            # adding -m mpi4py to the command line is supposed to prevent deadlocks by
+            # killing all of the procs.
             cmd =  [mpirun_exe, '-n', str(self.nprocs),
-                   sys.executable,
+                   sys.executable, '-m', 'mpi4py',
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                    self.spec] + _options2args()
 
