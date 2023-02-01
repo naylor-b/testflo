@@ -59,7 +59,7 @@ class DeprecationsReport(object):
 
         if count > 0:
             write("\n\nFor a stack trace of reported deprecations, run the\n"
-                  "identified test wth the --disallow_deprecations option.")
+                  "identified test with the --disallow_deprecations option.")
 
         write("\n" + "=" * (len(title) + 2 * len(eqs)) + "\n")
 
