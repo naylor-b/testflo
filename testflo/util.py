@@ -116,7 +116,7 @@ def _get_parser():
                         help="Display a list of all deprecation warnings encountered in testing.")
     parser.add_argument('--deprecations_report', action='store', dest='deprecations_report',
                         metavar='FILE', default=None,
-                        help='Name of deprecations report file.  Default is None.')
+                        help='Generate a deprecations report with the given file name.  Default is None.')
     parser.add_argument('--disallow_deprecations', action='store_true', dest='disallow_deprecations',
                         help="Raise deprecation warnings as Exceptions.")
 
@@ -487,4 +487,3 @@ def elapsed_str(elapsed):
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 def ismethod(obj):
     return inspect.isfunction(obj) or inspect.ismethod(obj)
-
