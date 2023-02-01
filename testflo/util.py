@@ -112,6 +112,14 @@ def _get_parser():
     parser.add_argument('--disallow_skipped', action='store_true', dest='disallow_skipped',
                         help="Return exit code 2 if no tests failed but some tests are skipped.")
 
+    parser.add_argument('--show_deprecations', action='store_true', dest='show_deprecations',
+                        help="Display a list of all deprecation warnings encountered in testing.")
+    parser.add_argument('--deprecations_report', action='store', dest='deprecations_report',
+                        metavar='FILE', default=None,
+                        help='Name of deprecations report file.  Default is None.')
+    parser.add_argument('--disallow_deprecations', action='store_true', dest='disallow_deprecations',
+                        help="Raise deprecation warnings as Exceptions.")
+
     parser.add_argument('tests', metavar='test', nargs='*',
                         help='A test method, test case, module, or directory to run. If not '
                              'supplied, the current working directory is assumed.')

@@ -3,14 +3,13 @@ from __future__ import print_function
 import os
 import sys
 import time
+import warnings
 import traceback
 from inspect import isclass
 import subprocess
-from tempfile import mkstemp
-from importlib import import_module
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 
-from types import FunctionType, ModuleType
+from types import FunctionType
 from io import StringIO
 
 from unittest import TestCase, SkipTest
@@ -100,6 +99,8 @@ class Test(object):
         self._mod_fixture_last = False
         self._tcase_fixture_first = False
         self._tcase_fixture_last = False
+
+        self.deprecations = {}
 
         self._get_test_info()
 
@@ -290,57 +291,81 @@ class Test(object):
 
                 self.start_time = time.time()
 
-                # if there's a module setup, run it
-                if mod_setup:
-                    status, expected = _try_call(mod_setup)
-                    if status != 'OK':
-                        done = True
-                        mod_teardown = None # don't do teardown if setup failed
+                catch_deps = self.options.show_deprecations or self.options.deprecations_report
+                raise_deps = self.options.disallow_deprecations
 
-                # handle @unittest.skip class decorator
-                if not done and hasattr(parent, '__unittest_skip__') and parent.__unittest_skip__:
-                    sys.stderr.write("%s\n" % parent.__unittest_skip_why__)
-                    status = 'SKIP'
-                    done = True
-                    tcase_setup = None
-                    tcase_teardown = None
+                with warnings.catch_warnings(record=True) if catch_deps else nullcontext() as w:
 
-                if tcase_setup:
-                    status, expected = _try_call(tcase_setup)
-                    if status != 'OK':
+                    if raise_deps:
+                        # raise deprecation warnings as exceptions
+                        warnings.filterwarnings("error", category=DeprecationWarning)
+                        warnings.filterwarnings("error", category=PendingDeprecationWarning)
+                    elif catch_deps:
+                        # catch all locations where deprecation warning is triggered
+                        warnings.filterwarnings("always", category=DeprecationWarning)
+                        warnings.filterwarnings("always", category=PendingDeprecationWarning)
+
+                    # if there's a module setup, run it
+                    if mod_setup:
+                        status, expected = _try_call(mod_setup)
+                        if status != 'OK':
+                            done = True
+                            mod_teardown = None # don't do teardown if setup failed
+
+                    # handle @unittest.skip class decorator
+                    if not done and hasattr(parent, '__unittest_skip__') and parent.__unittest_skip__:
+                        sys.stderr.write("%s\n" % parent.__unittest_skip_why__)
+                        status = 'SKIP'
                         done = True
+                        tcase_setup = None
                         tcase_teardown = None
 
-                # if there's a setUp method, run it
-                if not done and setup:
-                    status, expected = _try_call(setup)
-                    if status != 'OK':
-                        done = True
+                    if tcase_setup:
+                        status, expected = _try_call(tcase_setup)
+                        if status != 'OK':
+                            done = True
+                            tcase_teardown = None
 
-                if not done:
-                    status, expected2 = _try_call(getattr(parent, funcname))
+                    # if there's a setUp method, run it
+                    if not done and setup:
+                        status, expected = _try_call(setup)
+                        if status != 'OK':
+                            done = True
 
-                if not done and teardown:
-                    tdstatus, expected3 = _try_call(teardown)
-                    if status == 'OK':
-                        status = tdstatus
+                    if not done:
+                        status, expected2 = _try_call(getattr(parent, funcname))
 
-                if tcase_teardown:
-                    _try_call(tcase_teardown)
+                    if not done and teardown:
+                        tdstatus, expected3 = _try_call(teardown)
+                        if status == 'OK':
+                            status = tdstatus
 
-                if mod_teardown:
-                    _try_call(mod_teardown)
+                    if tcase_teardown:
+                        _try_call(tcase_teardown)
 
-                self.end_time = time.time()
-                self.status = status
-                self.err_msg = errstream.getvalue()
-                self.memory_usage = get_memory_usage()
-                self.expected_fail = expected or expected2 or expected3
+                    if mod_teardown:
+                        _try_call(mod_teardown)
 
-                if sys.platform == 'win32':
-                    self.load = (0.0, 0.0, 0.0)
-                else:
-                    self.load = os.getloadavg()
+                    self.end_time = time.time()
+                    self.status = status
+                    self.err_msg = errstream.getvalue()
+                    self.memory_usage = get_memory_usage()
+                    self.expected_fail = expected or expected2 or expected3
+
+                    if sys.platform == 'win32':
+                        self.load = (0.0, 0.0, 0.0)
+                    else:
+                        self.load = os.getloadavg()
+
+                    if catch_deps and w:
+                        deprecations = [wm for wm in w
+                                        if wm.category is DeprecationWarning
+                                        or wm.category is PendingDeprecationWarning]
+                        for wm in deprecations:
+                            msg = str(wm.message)
+                            dep = self.deprecations.get(msg, set())
+                            dep.add((wm.filename, wm.lineno, self.spec))
+                            self.deprecations[msg] = dep
 
             finally:
                 stop_coverage()
