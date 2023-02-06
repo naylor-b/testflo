@@ -1,5 +1,6 @@
 import sys
 import os
+import site
 
 from io import StringIO
 
@@ -33,7 +34,7 @@ class DeprecationsReport(object):
         report = StringIO()
 
         title = " Deprecations Report "
-        eqs = "=" * 16
+        eqs = "=" * 30
 
         write = report.write
 
@@ -41,24 +42,39 @@ class DeprecationsReport(object):
 
         count = len(deprecations)
 
-        write("\n\n{} unique deprecation warnings were captured{}\n".format(count, ':' if count else '.'))
+        write("\n\n{} unique deprecation warnings were captured{}\n\n".format(count, ':' if count else '.'))
 
         if count == 0 and self.options.disallow_deprecations:
-            write("\n\nDeprecation warnings have been raised as Exceptions\n"
+            write("\nDeprecation warnings have been raised as Exceptions\n"
                   "due to the use of the --disallow_deprecations option,\n"
                   "so no deprecation warnings have been captured.")
+
+        startdir = self.startdir
+        try:
+            sitedirs = site.getsitepackages()
+        except:
+            # python older than 3.2
+            sitedirs = []
+
+        def trim_path(path):
+            # trim the start directory or the site-packages directory from the path
+            if path.startswith(startdir):
+                path = path[len(startdir):]
+            else:
+                for d in sitedirs:
+                    if path.startswith(d):
+                        path = path[len(d):]
+            return path
 
         for msg in sorted(deprecations):
             write("--\n{}\n\n".format(msg))
             for filename, lineno, test_spec in deprecations[msg]:
-                write("    {}, line {}\n".format(filename, lineno))
+                write("    {}, line {}\n".format(trim_path(filename), lineno))
                 if test_spec:
-                    if test_spec.startswith(self.startdir):
-                        test_spec = test_spec[len(self.startdir):]
-                    write("    [{}]\n\n".format(test_spec))
+                    write("    [{}]\n\n".format(trim_path(test_spec)))
 
         if count > 0:
-            write("\n\nFor a stack trace of reported deprecations, run the\n"
+            write("\n\nFor a stack trace of reported deprecations, run the "
                   "identified test with the --disallow_deprecations option.")
 
         write("\n" + "=" * (len(title) + 2 * len(eqs)) + "\n")
