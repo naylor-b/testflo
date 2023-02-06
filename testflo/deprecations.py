@@ -33,12 +33,12 @@ class DeprecationsReport(object):
     def generate_report(self, deprecations):
         report = StringIO()
 
-        title = " Deprecations Report "
-        eqs = "=" * 30
+        title = "Deprecations Report"
+        eqs = "=" * len(title)
 
         write = report.write
 
-        write("\n{}{}{}\n".format(eqs, title, eqs))
+        write("\n\n{}\n{}\n".format(title, eqs))
 
         count = len(deprecations)
 
@@ -76,7 +76,5 @@ class DeprecationsReport(object):
         if count > 0:
             write("\n\nFor a stack trace of reported deprecations, run the "
                   "identified test with the --disallow_deprecations option.")
-
-        write("\n" + "=" * (len(title) + 2 * len(eqs)) + "\n")
 
         return report.getvalue()
