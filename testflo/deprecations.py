@@ -38,7 +38,7 @@ class DeprecationsReport(object):
 
         write = report.write
 
-        write("\n\n{}\n{}\n\n".format(title, eqs))
+        write("\n{}\n{}\n\n".format(title, eqs))
 
         count = len(deprecations)
 
