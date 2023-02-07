@@ -38,11 +38,11 @@ class DeprecationsReport(object):
 
         write = report.write
 
-        write("\n\n{}\n{}\n".format(title, eqs))
+        write("\n\n{}\n{}\n\n".format(title, eqs))
 
         count = len(deprecations)
 
-        write("\n\n{} unique deprecation warnings were captured{}\n\n".format(count, ':' if count else '.'))
+        write("{} unique deprecation warnings were captured{}\n\n".format(count, ':' if count else '.'))
 
         if count == 0 and self.options.disallow_deprecations:
             write("\nDeprecation warnings have been raised as Exceptions\n"
