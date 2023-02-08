@@ -64,6 +64,7 @@ class DeprecationsReport(object):
                 for d in sitedirs:
                     if path.startswith(d):
                         path = path[len(d):]
+                        break
             return path
 
         for msg in sorted(deprecations):
