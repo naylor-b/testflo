@@ -1,6 +1,16 @@
 # RELEASE NOTES
 
 ***********************
+# testflo version 1.4.10
+February 8, 2023
+
+- added the following new options [#76](https://github.com/OpenMDAO/testflo/pull/76)
+  --show_deprecations: Display a list of all deprecation warnings encountered in testing.
+  --deprecations_report: Generate a deprecations report with the given file name.
+  --disallow_deprecations: Raise deprecation warnings as Exceptions.
+
+
+***********************
 # testflo version 1.4.9
 July 25, 2022
 
