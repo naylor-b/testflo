@@ -37,6 +37,7 @@ from testflo.runner import ConcurrentTestRunner
 from testflo.printer import ResultPrinter
 from testflo.benchmark import BenchmarkWriter
 from testflo.summary import ResultSummary
+from testflo.deprecations import DeprecationsReport
 from testflo.duration import DurationSummary
 from testflo.discover import TestDiscoverer
 from testflo.filters import TimeFilter, FailFilter
@@ -205,6 +206,9 @@ skip_dirs=site-packages,
             runner = ConcurrentTestRunner(options, queue)
 
             pipeline.append(runner.get_iter)
+
+            if options.show_deprecations or options.deprecations_report:
+                pipeline.append(DeprecationsReport(options).get_iter)
 
             if options.benchmark:
                 pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
