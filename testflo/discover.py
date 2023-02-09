@@ -157,7 +157,7 @@ class TestDiscoverer(object):
         TestCase class.
         """
         tcname = ':'.join((fname, testcase.__name__))
-        for name, method in getmembers(testcase, ismethod):
+        for name, _ in getmembers(testcase, ismethod):
             if self.func_match(name):
                 yield Test('.'.join((tcname, name)), self.options)
 

@@ -19,6 +19,7 @@ from testflo.cover import start_coverage, stop_coverage
 
 from testflo.util import get_module, ismethod, get_memory_usage, \
                          get_testpath, _options2args
+from testflo.utresult import UnitTestResult
 from testflo.devnull import DevNull
 
 
@@ -134,7 +135,7 @@ class Test(object):
         if self.err_msg:
             self.start_time = self.end_time = time.time()
 
-    def _run_sub(self, cmd, queue, env):
+    def _run_subproc(self, cmd, queue, env):
         """
         Run a command in a subprocess.
         """
@@ -179,7 +180,7 @@ class Test(object):
                self.spec]
 
         try:
-            result = self._run_sub(cmd, queue, os.environ)
+            result = self._run_subproc(cmd, queue, os.environ)
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -205,7 +206,7 @@ class Test(object):
                    os.path.join(os.path.dirname(__file__), 'mpirun.py'),
                    self.spec] + _options2args()
 
-            result = self._run_sub(cmd, queue, os.environ)
+            result = self._run_subproc(cmd, queue, os.environ)
 
         except:
             # we generally shouldn't get here, but just in case,
@@ -326,19 +327,23 @@ class Test(object):
                             done = True
                             tcase_teardown = None
 
-                    # if there's a setUp method, run it
-                    if not done and setup:
-                        status, expected = _try_call(setup)
-                        if status != 'OK':
-                            done = True
+                    if testcase is None:
+                        # if there's a setUp method, run it
+                        if not done and setup:
+                            status, expected = _try_call(setup)
+                            if status != 'OK':
+                                done = True
 
-                    if not done:
-                        status, expected2 = _try_call(getattr(parent, funcname))
+                        if not done:
+                            status, expected2 = _try_call(getattr(parent, funcname))
 
-                    if not done and teardown:
-                        tdstatus, expected3 = _try_call(teardown)
-                        if status == 'OK':
-                            status = tdstatus
+                        if not done and teardown:
+                            tdstatus, expected3 = _try_call(teardown)
+                            if status == 'OK':
+                                status = tdstatus
+                    else: # use unittest code to run the test and handle subtests
+                        result= UnitTestResult()
+                        parent.run(result)
 
                     if tcase_teardown:
                         _try_call(tcase_teardown)
@@ -435,10 +440,8 @@ def _try_call(func):
     and returns the status (OK, SKIP, FAIL).
     """
     status = 'OK'
-    if getattr(func, '__unittest_expecting_failure__', False):
-        expected = True
-    else:
-        expected = False
+    expected = getattr(func, '__unittest_expecting_failure__', False)
+
     try:
         func()
     except SkipTest as e:

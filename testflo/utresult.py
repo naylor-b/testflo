@@ -1,69 +1,78 @@
 import unittest
+from collections import namedtuple
+
+
+class ResultData(object):
+    __slots__ = ['testcase', 'status', 'error', 'subtests']
+    def __init__(self, tcase):
+        self.testcase = tcase
+        self.status = None
+        self.error = None
+        self.subtests = []
+
+    def __iter__(self):
+        yield self.testcase
+        yield self.status
+        yield self.error
+        yield self.subtests
+
+    def add_subtest(self, subtest, err):
+        self.subtests.append((subtest, err))
+
 
 class UnitTestResult(unittest.TestResult):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tests = {}
+
     def startTest(self, test):
-        print(f"Starting test {test}")
+        # print("Starting test", test, "TYPE:", type(test), "TEST:", test.id())
+        self._tests[test.id()] = ResultData(test)
         super().startTest(test)
 
-    # def _setupStdout(self):
-    #     if self.buffer:
-    #         if self._stderr_buffer is None:
-    #             self._stderr_buffer = io.StringIO()
-    #             self._stdout_buffer = io.StringIO()
-    #         sys.stdout = self._stdout_buffer
-    #         sys.stderr = self._stderr_buffer
+    def _setupStdout(self):
+        pass  # don't do anything here.  It's done outside this class
 
-    def startTestRun(self):
-        """Called once before any tests are executed.
+    # def startTestRun(self):
+    #     """Called once before any tests are executed.
 
-        See startTest for a method called before each test.
-        """
-        print("Starting test run...")
+    #     See startTest for a method called before each test.
+    #     """
+    #     print("Starting test run...")
 
-    def stopTest(self, test):
-        """Called when the given test has been run"""
-        print(f"Test {test} is done.")
-        super().stopTest(test)
+    # def stopTest(self, test):
+    #     """Called when the given test has been run"""
+    #     print(f"Test {test} is done.")
+    #     super().stopTest(test)
 
-    # def _restoreStdout(self):
-    #     if self.buffer:
-    #         if self._mirrorOutput:
-    #             output = sys.stdout.getvalue()
-    #             error = sys.stderr.getvalue()
-    #             if output:
-    #                 if not output.endswith('\n'):
-    #                     output += '\n'
-    #                 self._original_stdout.write(STDOUT_LINE % output)
-    #             if error:
-    #                 if not error.endswith('\n'):
-    #                     error += '\n'
-    #                 self._original_stderr.write(STDERR_LINE % error)
+    def _restoreStdout(self):
+        pass
 
-    #         sys.stdout = self._original_stdout
-    #         sys.stderr = self._original_stderr
-    #         self._stdout_buffer.seek(0)
-    #         self._stdout_buffer.truncate()
-    #         self._stderr_buffer.seek(0)
-    #         self._stderr_buffer.truncate()
+    # def stopTestRun(self):
+    #     """Called once after all tests are executed.
 
-    def stopTestRun(self):
-        """Called once after all tests are executed.
-
-        See stopTest for a method called after each test.
-        """
-        print("Stopping test run...")
+    #     See stopTest for a method called after each test.
+    #     """
+    #     print("Stopping test run...")
 
     def addError(self, test, err):
         """Called when an error has occurred. 'err' is a tuple of values as
-        returned by sys.exc_info().
+        returned by sys.exc_info().  Not called for subtests.
         """
-        print(f"Error occurred in test {test}: {self._exc_info_to_string(err, test)}")
+        # print(f"Error occurred in test {test}: {self._exc_info_to_string(err, test)}")
+        resdata = self._tests[test.id()]
+        resdata.error = self._exc_info_to_string(err, test)
+        resdata.status = 'FAIL'
         super().addError(test, err)
 
     def addFailure(self, test, err):
         """Called when an error has occurred. 'err' is a tuple of values as
-        returned by sys.exc_info()."""
-        print(f"Failure occurred in test {test}: {self._exc_info_to_string(err, test)}")
+        returned by sys.exc_info().  Not called for subtests.
+        """
+        # print(f"Failure occurred in test {test}: {self._exc_info_to_string(err, test)}")
+        resdata = self._tests[test.id()]
+        resdata.error = self._exc_info_to_string(err, test)
+        resdata.status = 'FAIL'
         super().addFailure(test, err)
 
     def addSubTest(self, test, subtest, err):
@@ -71,16 +80,24 @@ class UnitTestResult(unittest.TestResult):
         'err' is None if the subtest ended successfully, otherwise it's a
         tuple of values as returned by sys.exc_info().
         """
-        print(f"Adding subtest: {test}, {subtest}, {err}")
+        # print(f"Adding subtest: {test}, {subtest}, ID: {subtest.id()}, MSG: {subtest._message}, {err}")
+        if err is not None:  # only save info if subtest fails
+            resdata = self._tests[test.id()]
+            resdata.add_subtest(subtest._message, self._exc_info_to_string(err, subtest))
+            resdata.status = 'FAIL'
         super().addSubTest(test, subtest, err)
 
     def addSuccess(self, test):
-        "Called when a test has completed successfully"
+        "Called when a test has completed successfully."
+        self._tests[test.id()].status = 'OK'
         print(f"Success for test {test}")
 
     def addSkip(self, test, reason):
         """Called when a test is skipped."""
-        print(f"Skipping test {test} for reason {reason}")
+        # print(f"Skipping test {test} for reason {reason}")
+        resdata = self._tests[test.id()]
+        resdata.status = 'SKIP'
+        resdata.error = reason
         super().addSkip(test, reason)
 
     # def addExpectedFailure(self, test, err):
