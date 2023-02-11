@@ -10,7 +10,7 @@ class ResultSummary(object):
     def __init__(self, options, stream=sys.stdout):
         self.stream = stream
         self.options = options
-        self._start_time = time.time()
+        self._start_time = time.perf_counter()
 
     def get_test_name(self, test):
         if self.options.full_path:
@@ -65,7 +65,7 @@ class ResultSummary(object):
         write("\n\nPassed:  %d\nFailed:  %d\nSkipped: %d\n" %
                             (oks, len(fails), len(skips)))
 
-        wallclock = time.time() - self._start_time
+        wallclock = time.perf_counter() - self._start_time
 
         s = "" if total == 1 else "s"
         if self.options.isolated:

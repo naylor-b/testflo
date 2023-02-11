@@ -48,10 +48,12 @@ class ResultPrinter(object):
             else:
                 run_type = ''
 
+            submsg = result.submsg if hasattr(result, 'submsg') else ''
             if result.err_msg:
-                stream.write("%s%s ... %s (%s, %d MB)\n%s\n" % (
+                stream.write("%s%s %s ... %s (%s, %d MB)\n%s\n" % (
                                                      run_type,
                                                      result.spec,
+                                                     submsg,
                                                      result.status,
                                                      stats, result.memory_usage,
                                                      result.err_msg))

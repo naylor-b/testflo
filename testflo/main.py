@@ -66,7 +66,7 @@ def run_pipeline(source, pipe, disallow_skipped):
     """Run a pipeline of test iteration objects."""
 
     global _start_time
-    _start_time = time.time()
+    _start_time = time.perf_counter()
 
     iters = [source]
 

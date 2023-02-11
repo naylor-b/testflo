@@ -7,7 +7,7 @@ class BenchmarkWriter(object):
     """
 
     def __init__(self, stream=sys.stdout):
-        self.timestamp = time.time()
+        self.timestamp = time.perf_counter()
         self.stream = stream
 
     def get_iter(self, input_iter):

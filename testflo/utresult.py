@@ -83,7 +83,7 @@ class UnitTestResult(unittest.TestResult):
         # print(f"Adding subtest: {test}, {subtest}, ID: {subtest.id()}, MSG: {subtest._message}, {err}")
         if err is not None:  # only save info if subtest fails
             resdata = self._tests[test.id()]
-            resdata.add_subtest(subtest._message, self._exc_info_to_string(err, subtest))
+            resdata.add_subtest(subtest, self._exc_info_to_string(err, subtest))
             resdata.status = 'FAIL'
         super().addSubTest(test, subtest, err)
 
@@ -100,14 +100,17 @@ class UnitTestResult(unittest.TestResult):
         resdata.error = reason
         super().addSkip(test, reason)
 
-    # def addExpectedFailure(self, test, err):
-    #     """Called when an expected failure/error occurred."""
-    #     self.expectedFailures.append(
-    #         (test, self._exc_info_to_string(err, test)))
+    def addExpectedFailure(self, test, err):
+        """Called when an expected failure/error occurred."""
+        super().addExpectedFailure(test, err)
+        resdata = self._tests[test.id()]
+        resdata.status = 'OK'
 
-    # def addUnexpectedSuccess(self, test):
-    #     """Called when a test was expected to fail, but succeed."""
-    #     self.unexpectedSuccesses.append(test)
+    def addUnexpectedSuccess(self, test):
+        """Called when a test was expected to fail, but succeed."""
+        super().addUnexpectedSuccess(test)
+        resdata = self._tests[test.id()]
+        resdata.status = 'FAIL'
 
     # def wasSuccessful(self):
     #     """Tells whether or not this result was a success."""

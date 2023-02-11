@@ -12,9 +12,10 @@ class DurationSummary(object):
     def get_iter(self, input_iter):
         durations = []
 
-        for test in input_iter:
-            durations.append((test.spec, test.end_time - test.start_time))
-            yield test
+        for tests in input_iter:
+            for test in tests:
+                durations.append((test.spec, test.end_time - test.start_time))
+                yield test
 
         write = self.stream.write
         mintime = self.options.durations_min

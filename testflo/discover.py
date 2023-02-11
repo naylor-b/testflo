@@ -3,6 +3,7 @@ import traceback
 from inspect import getmembers, isclass, isfunction
 from importlib import import_module
 from unittest import TestCase
+from fnmatch import fnmatchcase
 
 from os.path import basename, dirname, isdir
 
@@ -22,8 +23,8 @@ def _has_class_fixture(tcase):
 class TestDiscoverer(object):
 
     def __init__(self, options, module_pattern='test*.py',
-                       func_match=lambda f: fnmatchcase(f, 'test*'),
-                       dir_exclude=None):
+                 func_match=lambda f: fnmatchcase(f, 'test*'),
+                 dir_exclude=None):
         self.options = options
         self.module_pattern = module_pattern
         self.func_match = func_match
@@ -121,8 +122,7 @@ class TestDiscoverer(object):
         directory and its subdirectories. Returns an iterator
         of Test objects.
         """
-        for f in find_files(dname, match=self.module_pattern,
-                                   direxclude=self.dir_exclude):
+        for f in find_files(dname, match=self.module_pattern, direxclude=self.dir_exclude):
             if not basename(f).startswith('__init__.'):
                 for result in self._module_iter(f):
                     yield result
