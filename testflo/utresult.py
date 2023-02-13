@@ -73,7 +73,6 @@ class UnitTestResult(unittest.TestResult):
     def addSuccess(self, test):
         "Called when a test has completed successfully."
         self._tests[test.id()].status = 'OK'
-        print(f"Success for test {test}")
 
     def addSkip(self, test, reason):
         """Called when a test is skipped."""
