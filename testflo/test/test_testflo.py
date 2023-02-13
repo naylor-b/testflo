@@ -70,3 +70,35 @@ class SkippedTestCase(unittest.TestCase):
 
     def test_4(self):
         pass
+
+
+class TestSubTests(unittest.TestCase):
+    def test_subtests(self):
+        # Base price by item
+        base_price = {"gum": 1.00, "milk": 2.50, "eggs": 2.75}
+        # Sales tax by state
+        sales_tax = {"Michigan": 0.06, "Ohio": 0.0575, "New Hampshire": 0.00}
+
+        # Loop through each state and item and precompute expected price
+        precalculated_price = {}
+        for state in sales_tax:
+            precalculated_price[state] = {}
+            for item in base_price:
+                precalculated_price[state][item] = (1.0 + sales_tax[state]) * base_price[item]
+
+        # Intentionally mess up michigan price for gum and ohio price for eggs
+        precalculated_price["Michigan"]["gum"] = 100.0
+        precalculated_price["Ohio"]["eggs"] = -3.14159
+
+        # Run through nested subtests, by state and item, and double check that logged price matches expected
+        for state in sales_tax:
+            with self.subTest(state=state):
+                for item in base_price:
+                    with self.subTest(item=item):
+                        expected_price = (1.0 + sales_tax[state]) * base_price[item]
+                        logged_price = precalculated_price[state][item]
+                        assert logged_price == expected_price
+
+
+class TestSubTestsMPI(TestSubTests):
+    N_PROCS = 2
