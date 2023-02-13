@@ -65,7 +65,7 @@ class ResultPrinter(object):
                                                     result.status,
                                                     stats, result.memory_usage))
         else:
-            stream.write(_result_map.get((result.status, result.expected_fail), '?'))
+            stream.write(_result_map[(result.status, result.expected_fail)])
             if self.options.pre_announce:
                 stream.write('\n')
 
