@@ -63,8 +63,6 @@ if __name__ == '__main__':
                     if test.status != 'FAIL' and tst.status in ('SKIP', 'FAIL'):
                         test.err_msg = tst.err_msg
                         test.status = tst.status
-                        # if tst.status == 'FAIL':
-                        #     break
 
         save_coverage()
 
