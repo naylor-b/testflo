@@ -25,9 +25,10 @@ class ResultPrinter(object):
         self.verbose = verbose
 
     def get_iter(self, input_iter):
-        for result in input_iter:
-            self._print_result(result)
-            yield result
+        for tests in input_iter:
+            for test in tests:
+                self._print_result(test)
+                yield test
 
     def _print_result(self, result):
         stream = self.stream
@@ -64,7 +65,7 @@ class ResultPrinter(object):
                                                     result.status,
                                                     stats, result.memory_usage))
         else:
-            stream.write(_result_map[(result.status, result.expected_fail)])
+            stream.write(_result_map.get((result.status, result.expected_fail), '?'))
             if self.options.pre_announce:
                 stream.write('\n')
 

@@ -62,6 +62,20 @@ def dryrun(input_iter):
             yield test
 
 
+class DeDuper(object):
+    """
+    Removes duplicates from the pipeline.
+    """
+
+    def get_iter(self, input_iter):
+        seen = set()
+        for tests in input_iter:
+            for test in tests:
+                if test.spec not in seen:
+                    yield test
+                    seen.add(test.spec)
+
+
 def run_pipeline(source, pipe, disallow_skipped):
     """Run a pipeline of test iteration objects."""
 
@@ -203,9 +217,7 @@ skip_dirs=site-packages,
             if options.pre_announce:
                 options.num_procs = 1
 
-            runner = ConcurrentTestRunner(options, queue)
-
-            pipeline.append(runner.get_iter)
+            pipeline.append(ConcurrentTestRunner(options, queue).get_iter)
 
             if options.show_deprecations or options.deprecations_report:
                 pipeline.append(DeprecationsReport(options).get_iter)
@@ -213,27 +225,23 @@ skip_dirs=site-packages,
             if options.benchmark:
                 pipeline.append(BenchmarkWriter(stream=bdata).get_iter)
 
+            verbose = -1 if options.compact else int(options.verbose)
+
+            pipeline.append(ResultPrinter(options, verbose=verbose).get_iter)
+            if not options.noreport:
+                pipeline.append(ResultPrinter(options, report, verbose=1).get_iter)
+
+            # prevent subtests from appearing multiple times in summaries
+            pipeline.append(DeDuper().get_iter)
+
             if options.durations:
                 pipeline.append(DurationSummary(options).get_iter)
-
-            if options.compact:
-                verbose = -1
-            else:
-                verbose = int(options.verbose)
-
-            pipeline.extend([
-                ResultPrinter(options, verbose=verbose).get_iter,
-                ResultSummary(options).get_iter,
-            ])
-            if not options.noreport:
-                # print verbose results and summary to a report file
-                if options.durations:
+                if not options.noreport:
                     pipeline.append(DurationSummary(options, stream=report).get_iter)
 
-                pipeline.extend([
-                    ResultPrinter(options, report, verbose=1).get_iter,
-                    ResultSummary(options, stream=report).get_iter,
-                ])
+            pipeline.append(ResultSummary(options).get_iter)
+            if not options.noreport:
+                pipeline.append(ResultSummary(options, stream=report).get_iter)
 
         if options.maxtime > 0:
             pipeline.append(TimeFilter(options.maxtime).get_iter)

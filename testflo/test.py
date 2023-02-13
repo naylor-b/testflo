@@ -189,7 +189,8 @@ class Test(object):
             self.err_msg = traceback.format_exc()
             result = self
 
-        result.isolated = True
+        for test in result:
+            test.isolated = True
 
         return result
 
@@ -216,7 +217,8 @@ class Test(object):
             self.err_msg = traceback.format_exc()
             result = self
 
-        result.mpi = True
+        for test in result:
+            test.mpi = True
 
         return result
 
@@ -321,6 +323,7 @@ class Test(object):
                     if testcase is None:
                         if not done:
                             status, expected2 = _try_call(getattr(parent, funcname))
+                        self.err_msg = errstream.getvalue()
                     else: # use unittest code to run the test and handle subtests
                         if tcase_setup:
                             status, expected = _try_call(tcase_setup)
@@ -332,21 +335,25 @@ class Test(object):
                         parent.run(result)
                         tname, data = result._tests.popitem()
                         tc, status, err, ut_subtests = data
+                        stream_val = errstream.getvalue()
+                        if stream_val:
+                            stream_val += '\n'
+                        else:
+                            stream_val = ''
                         if ut_subtests:
                             for sub, err in ut_subtests:
                                 subtest = SubTest(sub._subDescription(), self.spec, self.options)
                                 subtest.status = status
-                                subtest.err_msg = err
+                                subtest.err_msg = stream_val + err
                                 subtest.end_time = time.perf_counter()
                                 subtest.memory_usage = get_memory_usage()
                                 subs.append(subtest)
-                                # print(f"Subtest {sub._subDescription()}: {status}, {err}")
-                        # else:
-                        #     print(tname, ":", status, err)
+                        else:
+                            if err:
+                                self.err_msg = stream_val + err
 
                     self.end_time = time.perf_counter()
                     self.status = status
-                    self.err_msg = errstream.getvalue()
                     self.memory_usage = get_memory_usage()
                     self.expected_fail = expected or expected2 or expected3
 
@@ -400,12 +407,18 @@ class Test(object):
 
 
 class SubTest(Test):
+    """
+    Like a normal Test, but includes subtest info when being stringified.
+
+    Attributes
+    ----------
+    submsg : str
+        String indicating which subtests were involved.
+    """
+
     def __init__(self, submsg, testspec, options):
         super().__init__(testspec, options)
         self.submsg = submsg
-
-    def __repr__(self):
-        return "%s: %s %s\n%s" % (self.spec, self.submsg, self.status, self.err_msg)
 
     def __str__(self):
         return "%s: %s %s\n%s" % (self.spec, self.submsg, self.status, self.err_msg)
