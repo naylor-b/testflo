@@ -4,7 +4,7 @@ import unittest
 from collections import namedtuple
 
 
-class ResultData(object):
+class _ResultData(object):
     __slots__ = ['testcase', 'status', 'error', 'subtests']
     def __init__(self, tcase):
         self.testcase = tcase
@@ -23,12 +23,16 @@ class ResultData(object):
 
 
 class UnitTestResult(unittest.TestResult):
+    """
+    Receives API calls from unittest so we can keep track of test status and outputs.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._tests = {}
 
     def startTest(self, test):
-        self._tests[test.id()] = ResultData(test)
+        """Called when a test is started."""
+        self._tests[test.id()] = _ResultData(test)
         super().startTest(test)
 
     def _setupStdout(self):
